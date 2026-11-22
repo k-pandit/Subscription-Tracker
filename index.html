@@ -1,0 +1,2586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subscription Tracker — Private Wealth &amp; T-1 Commitment Ledger</title>
+  <meta name="theme-color" content="#0B111E" />
+  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Subscription Tracker" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            serif: ['Newsreader', 'Georgia', 'serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          colors: {
+            canvas: '#F5F4EF',
+            surface: '#FFFFFF',
+            hairline: '#E5E2DA',
+            ink: '#0C1220',
+            muted: '#5A6170',
+            tealbrand: '#0D7369',
+            obsidian: '#0B111E',
+            goldaccent: '#C9A24D'
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      background-color: #F5F4EF;
+      color: #0C1220;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    .hero-mesh {
+      background-color: #0B111E;
+      background-image:
+        radial-gradient(at 15% 15%, rgba(13, 115, 105, 0.24) 0px, transparent 52%),
+        radial-gradient(at 85% 20%, rgba(201, 162, 77, 0.14) 0px, transparent 48%),
+        radial-gradient(at 50% 100%, rgba(30, 41, 59, 0.5) 0px, transparent 60%);
+    }
+    .card-bento {
+      background: #FFFFFF;
+      border: 1px solid #E5E2DA;
+      box-shadow:
+        0 1px 2px rgba(12, 18, 32, 0.04),
+        0 10px 28px -10px rgba(12, 18, 32, 0.07);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+    .card-bento:hover {
+      box-shadow:
+        0 2px 4px rgba(12, 18, 32, 0.05),
+        0 16px 36px -12px rgba(12, 18, 32, 0.10);
+    }
+    .card-surface {
+      background: #FFFFFF;
+      border: 1px solid #E5E2DA;
+      box-shadow: 0 1px 3px rgba(12, 18, 32, 0.03);
+    }
+    .toggle-track {
+      transition: background-color 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .toggle-thumb {
+      transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #D6D3C9;
+      border-radius: 9999px;
+    }
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(1.25); }
+    }
+    .dot-pulse {
+      animation: pulseDot 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col overflow-x-hidden">
+
+  <!-- Security Lock / Biometric Login Gate -->
+  <div id="auth-gate" class="fixed inset-0 z-50 hero-mesh text-white flex items-center justify-center p-4 overflow-y-auto">
+    <div class="w-full max-w-md bg-white/[0.06] backdrop-blur-xl border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-11 h-11 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0">
+          <i data-lucide="shield-check" class="w-5 h-5 text-emerald-300"></i>
+        </div>
+        <div>
+          <h1 class="font-serif text-2xl font-medium tracking-tight text-white leading-none">Subscription Tracker</h1>
+          <p class="text-xs text-slate-300/80 mt-1">Protected Personal Commitment Vault</p>
+        </div>
+      </div>
+
+      <!-- First-Time Setup: Create Vault PIN -->
+      <form id="auth-setup-form" class="hidden space-y-4 text-xs">
+        <div class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/10">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-semibold flex items-center justify-center shrink-0">
+              KP
+            </div>
+            <div class="min-w-0">
+              <div class="text-xs font-semibold text-white truncate">First-Time Vault Setup</div>
+              <div class="text-[11px] font-mono text-slate-300 truncate">kamalesh.pandit14@gmail.com</div>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-[11px] text-slate-300 leading-relaxed">
+          Create your personal Vault PIN to secure your commitments. Next time you open the app, you'll sign in with this PIN or Biometrics.
+        </p>
+
+        <div>
+          <label class="block font-medium text-slate-200 mb-1">Create Vault PIN (min 4 digits)</label>
+          <input id="setup-pin" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" required placeholder="Tap to enter new PIN" class="w-full px-3.5 py-3 rounded-xl bg-white/10 border border-white/15 text-white text-center tracking-[0.35em] font-mono placeholder:tracking-normal placeholder:font-sans placeholder-slate-400 text-base sm:text-xs focus:outline-none focus:border-emerald-400" />
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-200 mb-1">Confirm Vault PIN</label>
+          <input id="setup-pin-confirm" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" required placeholder="Re-enter PIN" class="w-full px-3.5 py-3 rounded-xl bg-white/10 border border-white/15 text-white text-center tracking-[0.35em] font-mono placeholder:tracking-normal placeholder:font-sans placeholder-slate-400 text-base sm:text-xs focus:outline-none focus:border-emerald-400" />
+        </div>
+
+        <p id="setup-error" class="hidden text-rose-300 font-medium text-center"></p>
+
+        <button type="submit" class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-obsidian font-semibold text-xs transition shadow-lg">
+          Create PIN &amp; Open Vault
+        </button>
+      </form>
+
+      <!-- Banking-Style Financial Sign-In -->
+      <form id="auth-login-form" class="space-y-4 text-xs">
+        <div class="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/10">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-semibold flex items-center justify-center shrink-0">
+              KP
+            </div>
+            <div class="min-w-0">
+              <div class="text-xs font-semibold text-white truncate">Kamalesh Kumar Pandit</div>
+              <div id="login-account-label" class="text-[11px] font-mono text-slate-300 truncate">kamalesh.pandit14@gmail.com</div>
+            </div>
+          </div>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-400/20 shrink-0">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            Secured
+          </span>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="font-medium text-slate-200">Enter Vault PIN</label>
+            <button id="btn-forgot-pin" type="button" class="text-[11px] font-medium text-emerald-300 hover:text-emerald-200 underline underline-offset-2">
+              Forgot Passcode?
+            </button>
+          </div>
+
+          <!-- PIN Input with Show/Hide + Live PIN Dots (triggers native phone numeric keypad) -->
+          <div id="pin-dots" class="flex items-center justify-center gap-3 mb-3 cursor-pointer" title="Tap to enter PIN">
+            <span class="w-3 h-3 rounded-full border border-white/30 bg-white/5 transition-all"></span>
+            <span class="w-3 h-3 rounded-full border border-white/30 bg-white/5 transition-all"></span>
+            <span class="w-3 h-3 rounded-full border border-white/30 bg-white/5 transition-all"></span>
+            <span class="w-3 h-3 rounded-full border border-white/30 bg-white/5 transition-all"></span>
+          </div>
+
+          <div class="relative">
+            <input id="login-pin" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" required placeholder="Tap to enter PIN" class="w-full pl-3.5 pr-10 py-3 rounded-xl bg-white/10 border border-white/15 text-white text-center tracking-[0.35em] font-mono placeholder:tracking-normal placeholder:font-sans placeholder-slate-400 text-base sm:text-xs focus:outline-none focus:border-emerald-400" />
+            <button id="btn-toggle-pin-vis" type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-300 hover:text-white" title="Show or hide passcode">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <p id="login-error" class="hidden text-rose-300 font-medium text-center"></p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+          <button id="btn-submit-login" type="submit" class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-obsidian font-semibold text-xs transition shadow-lg">
+            Sign In to Vault
+          </button>
+          <button id="btn-biometric-login" type="button" class="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-semibold text-xs inline-flex items-center justify-center gap-2 transition">
+            <i data-lucide="fingerprint" class="w-4 h-4 text-amber-300"></i>
+            <span id="biometric-btn-label">Biometrics</span>
+          </button>
+        </div>
+        <p id="biometric-hint" class="text-[11px] text-slate-400 text-center leading-relaxed"></p>
+      </form>
+
+      <!-- Forgot / Reset Passcode Form -->
+      <form id="auth-forgot-form" class="hidden space-y-3.5 text-xs">
+        <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-400/25 text-amber-100 text-[11px] leading-relaxed">
+          Verify your registered email and the last 4 digits of your primary HDFC Bank account to reset your passcode.
+        </div>
+        <div>
+          <label class="block font-medium text-slate-200 mb-1">Registered Email</label>
+          <input id="forgot-email" type="email" required placeholder="kamalesh.pandit14@gmail.com" class="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white placeholder-slate-400 text-base sm:text-xs focus:outline-none focus:border-emerald-400" />
+        </div>
+        <div>
+          <label class="block font-medium text-slate-200 mb-1">Primary Bank A/c Last 4 Digits</label>
+          <input id="forgot-last4" type="text" maxlength="4" pattern="[0-9]{4}" required placeholder="4 digits (e.g. ••••)" class="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white placeholder-slate-400 font-mono text-base sm:text-xs focus:outline-none focus:border-emerald-400" />
+        </div>
+        <div>
+          <label class="block font-medium text-slate-200 mb-1">New Passcode (min 4 chars)</label>
+          <input id="forgot-new-pin" type="password" minlength="4" required placeholder="Enter new passcode" class="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white placeholder-slate-400 text-base sm:text-xs focus:outline-none focus:border-emerald-400" />
+        </div>
+        <p id="forgot-error" class="hidden text-rose-300 font-medium"></p>
+        <div class="flex items-center gap-2 pt-1">
+          <button id="btn-back-to-login" type="button" class="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-medium transition">
+            Back
+          </button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-obsidian font-semibold transition">
+            Reset &amp; Sign In
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Protected App Shell -->
+  <div id="app-shell" class="hidden min-h-screen flex flex-col">
+  <!-- Executive Obsidian Header -->
+  <header class="hero-mesh text-white border-b border-white/10 pb-14">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-3">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <!-- Brand & Editorial Title -->
+        <div class="flex items-center gap-3.5 min-w-0">
+          <div class="w-11 h-11 rounded-xl bg-white/10 border border-white/15 backdrop-blur flex items-center justify-center shrink-0 shadow-inner">
+            <i data-lucide="landmark" class="w-5 h-5 text-amber-300"></i>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <h1 class="font-serif text-2xl sm:text-[26px] font-medium tracking-tight text-white leading-none">
+                Subscription Tracker
+              </h1>
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-400/25">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                Synced Nov 22, 2026
+              </span>
+            </div>
+            <p class="text-xs text-slate-300/80 mt-1 truncate">
+              Private Commitment &amp; Liability Ledger — Insurance, ULIPs, Mutual Funds, Loans, Credit Cards &amp; Subscriptions
+            </p>
+          </div>
+        </div>
+
+        <!-- Desktop Page Navigation + Quick Actions -->
+        <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+          <nav class="hidden md:flex items-center gap-1 bg-white/10 border border-white/15 rounded-xl p-1 mr-1">
+            <button type="button" data-nav="home" class="nav-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-obsidian transition">Dashboard</button>
+            <button type="button" data-nav="ledger" class="nav-pill px-3 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-white transition">Ledger</button>
+            <button type="button" data-nav="reminders" class="nav-pill px-3 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-white transition inline-flex items-center gap-1.5">
+              <span>Reminders</span>
+              <span id="t1-badge-count" class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold bg-amber-400 text-obsidian tabular-nums">0</span>
+            </button>
+            <button type="button" data-nav="settings" class="nav-pill px-3 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-white transition">Sync &amp; Security</button>
+          </nav>
+
+          <button id="btn-open-add" type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-stone-100 text-obsidian shadow-sm transition min-h-[38px]">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Add Item</span>
+          </button>
+
+          <button id="btn-lock-app" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/30 text-rose-100 transition min-h-[38px]" title="Lock Vault">
+            <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Lock</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 -mt-8 pb-24 md:pb-10 space-y-6">
+    <!-- PAGE 1: HOME (Dashboard & Notifications) -->
+    <div id="page-home" class="page-view space-y-6">
+
+    <!-- Floating Executive KPI Bento Strip -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="card-bento rounded-2xl p-5 relative overflow-hidden">
+        <div class="absolute top-0 left-0 right-0 h-[3px] bg-tealbrand"></div>
+        <div class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted">
+          <span>Confirmed Monthly Outflow</span>
+          <span class="w-7 h-7 rounded-lg bg-teal-50 text-tealbrand flex items-center justify-center">
+            <i data-lucide="wallet" class="w-3.5 h-3.5"></i>
+          </span>
+        </div>
+        <div class="mt-2.5 flex items-baseline gap-2">
+          <span id="kpi-monthly" class="font-serif text-3xl font-semibold tracking-tight text-ink tabular-nums">₹0</span>
+          <span class="text-xs text-muted">/ mo</span>
+        </div>
+        <p id="kpi-annual" class="mt-1.5 text-xs text-muted tabular-nums">Annualized: ₹0 / yr</p>
+      </div>
+
+      <div class="card-bento rounded-2xl p-5 relative overflow-hidden">
+        <div class="absolute top-0 left-0 right-0 h-[3px] bg-indigo-600"></div>
+        <div class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted">
+          <span>Annual Policies</span>
+          <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center">
+            <i data-lucide="calendar-clock" class="w-3.5 h-3.5"></i>
+          </span>
+        </div>
+        <div class="mt-2.5 flex items-baseline gap-2">
+          <span id="kpi-yearly-only" class="font-serif text-3xl font-semibold tracking-tight text-ink tabular-nums">₹0</span>
+          <span class="text-xs text-muted">/ yr</span>
+        </div>
+        <p class="mt-1.5 text-xs text-muted">HDFC ERGO Health due Dec 30, 2026</p>
+      </div>
+
+      <div class="card-bento rounded-2xl p-5 relative overflow-hidden">
+        <div class="absolute top-0 left-0 right-0 h-[3px] bg-amber-500"></div>
+        <div class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted">
+          <span>T-1 Reminders Armed</span>
+          <span class="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+            <i data-lucide="bell" class="w-3.5 h-3.5"></i>
+          </span>
+        </div>
+        <div class="mt-2.5 flex items-baseline gap-2">
+          <span id="kpi-t1-armed" class="font-serif text-3xl font-semibold tracking-tight text-ink tabular-nums">0</span>
+          <span id="kpi-t1-total" class="text-xs text-muted">of 0 active</span>
+        </div>
+        <p id="kpi-next-t1" class="mt-1.5 text-xs text-amber-700 font-medium truncate">Next alert: —</p>
+      </div>
+
+      <div id="kpi-card-attention" role="button" tabindex="0" class="card-bento rounded-2xl p-5 relative overflow-hidden cursor-pointer hover:border-rose-300" title="Click to view Overdue / Failed &amp; Unverified items">
+        <div class="absolute top-0 left-0 right-0 h-[3px] bg-rose-600"></div>
+        <div class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted">
+          <span>Needs Attention</span>
+          <span class="w-7 h-7 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center">
+            <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+          </span>
+        </div>
+        <div class="mt-2.5 flex items-baseline gap-2">
+          <span id="kpi-issues" class="font-serif text-3xl font-semibold tracking-tight text-ink tabular-nums">0</span>
+          <span class="text-xs text-muted">items flagged</span>
+        </div>
+        <p class="mt-1.5 text-xs text-muted">Failed Nov ACH &amp; unverified entries</p>
+      </div>
+    </section>
+
+    <!-- Today's Payment Activity Banner -->
+    <div id="today-paid-banner" class="hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-teal-50/40 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-start gap-3">
+        <div class="p-2 rounded-xl bg-emerald-100 text-emerald-700 shrink-0 mt-0.5">
+          <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-semibold text-emerald-950" id="today-paid-title">Today's Payment Detected</h2>
+          <p class="text-xs text-emerald-800 mt-0.5" id="today-paid-desc"></p>
+        </div>
+      </div>
+      <button id="btn-clear-today-banner" type="button" class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium border border-emerald-200 bg-white hover:bg-emerald-50 text-emerald-800 transition">
+        Dismiss
+      </button>
+    </div>
+
+    <!-- Urgent Action Banner (Overdue / Failed Items) -->
+    <div id="urgent-banner" class="hidden rounded-2xl border border-rose-200/90 bg-gradient-to-r from-rose-50 via-white to-rose-50/40 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-start gap-3">
+        <div class="p-2 rounded-xl bg-rose-100 text-rose-700 shrink-0 mt-0.5">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-semibold text-rose-950" id="urgent-title">Attention Required</h2>
+          <p class="text-xs text-rose-800/90 mt-0.5" id="urgent-desc"></p>
+        </div>
+      </div>
+      <button id="btn-filter-overdue" type="button" class="shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-700 hover:bg-rose-800 text-white shadow-sm transition">
+        View Overdue / Failed
+      </button>
+    </div>
+
+    <!-- Analytics & 30-Day Cashflow Strip -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <!-- Category Breakdown Chart -->
+      <div class="card-surface rounded-2xl p-6 lg:col-span-5 flex flex-col">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <h2 class="font-serif text-lg font-medium text-ink">Outflow Architecture</h2>
+            <p class="text-xs text-muted">Monthly recurring commitments grouped by nature</p>
+          </div>
+          <span class="text-[11px] font-mono text-muted bg-stone-100 border border-hairline px-2 py-0.5 rounded-md">INR (₹)</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center flex-1">
+          <div class="relative h-48 sm:h-56 sm:col-span-6 flex items-center justify-center">
+            <canvas id="categoryChart"></canvas>
+            <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              <span class="text-[10px] uppercase tracking-wider text-muted font-semibold">Monthly</span>
+              <span id="chart-center-total" class="font-serif text-lg font-semibold text-ink tabular-nums">₹0</span>
+            </div>
+          </div>
+          <div id="chart-legend" class="sm:col-span-6 space-y-2 text-xs">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Upcoming Payment & T-1 Schedule -->
+      <div class="card-surface rounded-2xl p-6 lg:col-span-7 flex flex-col">
+        <div class="flex items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 class="font-serif text-lg font-medium text-ink">30-Day Debit &amp; T-1 Alert Timeline</h2>
+            <p class="text-xs text-muted">Chronological due dates paired with 1-day-before notification dates</p>
+          </div>
+          <button id="btn-test-notification" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-hairline bg-canvas/60 hover:bg-stone-100 text-ink transition shrink-0">
+            <i data-lucide="send" class="w-3.5 h-3.5 text-tealbrand"></i>
+            <span>Test T-1 Alert</span>
+          </button>
+        </div>
+        <div id="timeline-list" class="space-y-2.5 overflow-y-auto max-h-60 pr-1.5 custom-scroll">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+    </div>
+
+    <!-- PAGE 2: LEDGER (All Commitments by Nature) -->
+    <div id="page-ledger" class="page-view hidden space-y-6">
+    <!-- Main Categorized Ledger -->
+    <section class="card-surface rounded-2xl overflow-hidden">
+      <div class="p-5 border-b border-hairline bg-stone-50/40 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <h2 class="font-serif text-xl font-medium text-ink">Master Commitment Ledger</h2>
+            <p class="text-xs text-muted mt-0.5">Filter by category, toggle 1-day-before alerts, or edit unverified amounts and end dates.</p>
+          </div>
+
+          <!-- Search & Status Controls -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <div class="relative w-full sm:w-64">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+              <input id="search-input" type="text" placeholder="Search policy, loan, card, SIP..." class="w-full pl-8 pr-3 py-2 text-base sm:text-xs rounded-xl border border-hairline bg-white focus:outline-none focus:ring-2 focus:ring-teal-700/15 focus:border-teal-700 transition" />
+            </div>
+
+            <select id="status-filter" class="px-3 py-2 text-base sm:text-xs rounded-xl border border-hairline bg-white text-ink focus:outline-none focus:ring-2 focus:ring-teal-700/15">
+              <option value="all">All Statuses</option>
+              <option value="active">Active Only</option>
+              <option value="attention">Overdue / Failed</option>
+              <option value="unverified">Unverified Details</option>
+              <option value="paid">Marked Paid This Cycle</option>
+            </select>
+
+            <button id="btn-reset-data" type="button" class="px-3 py-2 text-xs font-medium rounded-xl border border-hairline bg-white text-muted hover:text-ink hover:bg-stone-50 transition" title="Restore original Gmail-verified dataset">
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <!-- Category Segmented Tabs -->
+        <div id="category-tabs" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Desktop Table View -->
+      <div class="hidden lg:block overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-hairline bg-[#FAF9F5] text-[11px] font-semibold uppercase tracking-wider text-muted">
+              <th class="py-3.5 px-5">Commitment &amp; Nature</th>
+              <th class="py-3.5 px-4">Amount &amp; Cycle</th>
+              <th class="py-3.5 px-4">Next Due Date</th>
+              <th class="py-3.5 px-4">Pay Until (End Date)</th>
+              <th class="py-3.5 px-4">Notify 1 Day Before</th>
+              <th class="py-3.5 px-4">Status</th>
+              <th class="py-3.5 px-5 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="ledger-tbody" class="divide-y divide-hairline text-xs">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile / Tablet Card View -->
+      <div id="ledger-cards" class="lg:hidden divide-y divide-hairline">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden py-14 px-4 text-center">
+        <div class="w-11 h-11 rounded-full bg-stone-100 text-muted flex items-center justify-center mx-auto mb-3">
+          <i data-lucide="inbox" class="w-5 h-5"></i>
+        </div>
+        <p class="text-sm font-semibold text-ink">No matching commitments found</p>
+        <p class="text-xs text-muted mt-1">Try clearing your search or switching category tabs.</p>
+      </div>
+    </section>
+    </div>
+
+    <!-- PAGE 3: REMINDERS (T-1 Notification Center & Calendar Export) -->
+    <div id="page-reminders" class="page-view hidden space-y-6">
+      <section class="card-surface rounded-2xl overflow-hidden">
+        <div class="p-6 border-b border-hairline bg-[#FAF9F5] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="font-serif text-xl font-medium text-ink">T-1 Day Notification Center</h2>
+            <p class="text-xs text-muted mt-0.5">All armed 1-day-before reminders in chronological order</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button id="btn-enable-browser-notify" type="button" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-tealbrand hover:bg-teal-800 text-white transition">
+              Enable Browser Alerts
+            </button>
+            <button id="btn-export-all-ics" type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-obsidian hover:bg-slate-800 text-white transition">
+              <i data-lucide="calendar-plus" class="w-4 h-4 text-emerald-300"></i>
+              <span>Export All .ics (T-1)</span>
+            </button>
+          </div>
+        </div>
+        <div class="px-6 py-3 bg-stone-50/70 border-b border-hairline text-xs text-muted flex items-center justify-between">
+          <span>Browser Push Status: <strong id="browser-perm-status" class="text-ink">Checking...</strong></span>
+        </div>
+        <div id="drawer-list" class="p-6 grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+    </div>
+
+    <!-- PAGE 4: SYNC & SECURITY (Gmail Auto-Sync, Biometrics, Passcode & Install) -->
+    <div id="page-settings" class="page-view hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <section class="card-surface rounded-2xl p-6 space-y-5 text-xs">
+          <div>
+            <h2 class="font-serif text-xl font-medium text-ink">Gmail Auto-Sync</h2>
+            <p class="text-muted mt-0.5">Link <span class="font-mono text-ink">kamalesh.pandit14@gmail.com</span> to auto-mark payments &amp; show today's payment message</p>
+          </div>
+
+          <div class="p-4 rounded-xl border border-hairline bg-[#FAF9F5] space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <span class="font-semibold text-ink block">Step 1: Copy &amp; Deploy Apps Script</span>
+                <span class="text-[11px] text-muted">Open <a href="https://script.google.com" target="_blank" rel="noopener noreferrer" class="text-tealbrand underline font-medium">script.google.com</a> as kamalesh.pandit14@gmail.com → New Project → Paste → Deploy as Web App (Execute as: Me, Access: Anyone).</span>
+              </div>
+              <button id="btn-copy-gas" type="button" class="px-3 py-1.5 rounded-lg bg-obsidian hover:bg-slate-800 text-white text-[11px] font-semibold transition shrink-0">
+                Copy Script
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <label class="block font-semibold text-ink">Step 2: Paste Deployed Web App URL (not your email)</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input id="gmail-endpoint-input" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 px-3 py-2 rounded-xl border border-hairline text-base sm:text-xs font-mono focus:outline-none focus:border-teal-700" />
+              <button id="btn-run-gmail-sync" type="button" class="px-4 py-2 rounded-xl bg-tealbrand hover:bg-teal-800 text-white font-semibold transition shrink-0">
+                Sync Gmail Now
+              </button>
+            </div>
+            <p id="gmail-sync-status" class="text-[11px] text-muted">Paste the https://script.google.com/macros/s/.../exec link generated in Step 1.</p>
+          </div>
+
+          <form id="parse-email-form" class="space-y-2.5 border-t border-hairline pt-4">
+            <label class="block font-semibold text-ink">Quick-Match from Payment Email / SMS</label>
+            <textarea id="parse-email-text" rows="3" placeholder="Paste any payment email or bank alert here to immediately mark it Paid and show today's payment banner." class="w-full px-3 py-2 rounded-xl border border-hairline text-base sm:text-xs focus:outline-none focus:border-teal-700"></textarea>
+            <button type="submit" class="px-4 py-2 rounded-xl bg-obsidian hover:bg-slate-800 text-white font-semibold transition">
+              Match &amp; Log Payment
+            </button>
+          </form>
+        </section>
+
+        <div class="space-y-6">
+          <section class="card-surface rounded-2xl p-6 space-y-5 text-xs">
+            <div>
+              <h2 class="font-serif text-xl font-medium text-ink">Security &amp; Biometrics</h2>
+              <p class="text-muted mt-0.5">Manage your Vault PIN and Fingerprint / Face ID passkey</p>
+            </div>
+
+            <div class="p-4 rounded-xl border border-hairline bg-[#FAF9F5] space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold text-ink">Biometric Unlock (WebAuthn)</span>
+                <span id="sec-bio-status" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-stone-200 text-stone-700">Not Enrolled</span>
+              </div>
+              <p class="text-[11px] text-muted leading-relaxed">
+                Enroll your device's Fingerprint, Face ID, or Windows Hello passkey for 1-tap biometric unlock on HTTPS sites.
+              </p>
+              <div class="flex items-center gap-2 pt-1">
+                <button id="btn-enroll-biometric" type="button" class="px-3.5 py-2 rounded-xl bg-tealbrand hover:bg-teal-800 text-white font-semibold transition">
+                  Enroll Biometric Passkey
+                </button>
+                <button id="btn-remove-biometric" type="button" class="hidden px-3 py-2 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 font-medium transition">
+                  Remove
+                </button>
+              </div>
+            </div>
+
+            <form id="change-pin-form" class="space-y-3 border-t border-hairline pt-4">
+              <h4 class="font-semibold text-ink">Change Vault PIN</h4>
+              <input id="new-pin-input" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4" required placeholder="New PIN (min 4 digits)" class="w-full px-3 py-2 rounded-xl border border-hairline text-base sm:text-xs focus:outline-none focus:border-teal-700" />
+              <button type="submit" class="px-4 py-2 rounded-xl bg-obsidian hover:bg-slate-800 text-white font-semibold transition">
+                Update PIN
+              </button>
+            </form>
+          </section>
+
+          <section class="card-surface rounded-2xl p-6 space-y-3 text-xs">
+            <h2 class="font-serif text-lg font-medium text-ink">Install on Phone</h2>
+            <button id="btn-native-install" type="button" class="hidden w-full py-2.5 rounded-xl bg-tealbrand hover:bg-teal-800 text-white font-semibold transition">
+              Install App Now
+            </button>
+            <p class="text-[11px] text-muted leading-relaxed">
+              <strong>Android (Chrome):</strong> Tap <strong>⋮ → Add to Home screen</strong> (or Create shortcut).<br />
+              <strong>iPhone (Safari):</strong> Tap <strong>Share → Add to Home Screen</strong>.
+            </p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-hairline px-2 py-1.5 grid grid-cols-4 gap-1">
+    <button type="button" data-nav="home" class="nav-pill-mob flex flex-col items-center justify-center py-1 rounded-xl text-[10px] font-semibold text-tealbrand bg-teal-50/70">
+      <i data-lucide="layout-dashboard" class="w-4 h-4 mb-0.5"></i>
+      <span>Home</span>
+    </button>
+    <button type="button" data-nav="ledger" class="nav-pill-mob flex flex-col items-center justify-center py-1 rounded-xl text-[10px] font-medium text-muted">
+      <i data-lucide="layers" class="w-4 h-4 mb-0.5"></i>
+      <span>Ledger</span>
+    </button>
+    <button type="button" data-nav="reminders" class="nav-pill-mob flex flex-col items-center justify-center py-1 rounded-xl text-[10px] font-medium text-muted">
+      <i data-lucide="bell-ring" class="w-4 h-4 mb-0.5"></i>
+      <span>Alerts</span>
+    </button>
+    <button type="button" data-nav="settings" class="nav-pill-mob flex flex-col items-center justify-center py-1 rounded-xl text-[10px] font-medium text-muted">
+      <i data-lucide="sliders-horizontal" class="w-4 h-4 mb-0.5"></i>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+  <!-- Footer -->
+  <footer class="border-t border-hairline bg-surface mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted">
+      <span>Sourced from <span class="font-mono text-ink">kamalesh.pandit14@gmail.com</span> &amp; Google Drive (<span class="italic">My subscriptions</span>) • Verified Nov 22, 2026</span>
+      <span>Edits &amp; T-1 reminder toggles persist locally in your browser.</span>
+    </div>
+  </footer>
+
+  </div>
+
+  <!-- Add / Edit Modal -->
+  <div id="item-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div id="modal-backdrop" class="absolute inset-0 bg-obsidian/50 backdrop-blur-[2px]"></div>
+    <div class="relative w-full max-w-lg bg-surface rounded-2xl border border-hairline shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-hairline bg-[#FAF9F5] flex items-center justify-between">
+        <h3 id="modal-title" class="font-serif text-xl font-medium text-ink">Add Financial Commitment</h3>
+        <button id="btn-close-modal" type="button" class="p-1.5 rounded-xl hover:bg-stone-200/60 text-muted transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form id="item-form" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs custom-scroll">
+        <input type="hidden" id="form-id" />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div class="sm:col-span-2">
+            <label class="block font-semibold text-ink mb-1">Title / Plan Name *</label>
+            <input id="form-name" type="text" required placeholder="e.g., HDFC Life Click2 Protect Super" class="w-full px-3 py-2 rounded-xl border border-hairline focus:outline-none focus:ring-2 focus:ring-teal-700/15 focus:border-teal-700" />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-ink mb-1">Category (Nature) *</label>
+            <select id="form-category" class="w-full px-3 py-2 rounded-xl border border-hairline bg-white focus:outline-none focus:border-teal-700">
+              <option value="protection">Protection &amp; Health Insurance</option>
+              <option value="ulip">ULIPs &amp; Endowment</option>
+              <option value="mf">Mutual Funds &amp; RD</option>
+              <option value="loan">Loans &amp; EMIs</option>
+              <option value="credit_card">Credit Cards</option>
+              <option value="subscription">Digital &amp; AI Subscriptions</option>
+              <option value="archived">Closed &amp; Archived</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-ink mb-1">Policy / Loan / Card No.</label>
+            <input id="form-ref" type="text" placeholder="e.g., J5156869" class="w-full px-3 py-2 rounded-xl border border-hairline font-mono focus:outline-none focus:border-teal-700" />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-ink mb-1">Amount (₹)</label>
+            <input id="form-amount" type="number" step="0.01" min="0" placeholder="Leave blank if unverified" class="w-full px-3 py-2 rounded-xl border border-hairline tabular-nums focus:outline-none focus:border-teal-700" />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-ink mb-1">Billing Cycle</label>
+            <select id="form-cycle" class="w-full px-3 py-2 rounded-xl border border-hairline bg-white focus:outline-none focus:border-teal-700">
+              <option value="Monthly">Monthly</option>
+              <option value="Annual">Annual</option>
+              <option value="One-Time">One-Time / Paid-Up</option>
+              <option value="Unverified">Unverified</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-ink mb-1">Next Due Date</label>
+            <input id="form-due" type="date" class="w-full px-3 py-2 rounded-xl border border-hairline focus:outline-none focus:border-teal-700" />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-ink mb-1">Pay Until (End Date / Tenure)</label>
+            <input id="form-until" type="text" placeholder="e.g., Jul 2034 (10-Yr PPT) or Ongoing" class="w-full px-3 py-2 rounded-xl border border-hairline focus:outline-none focus:border-teal-700" />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-ink mb-1">Payment Method</label>
+            <input id="form-method" type="text" placeholder="e.g., HDFC A/c 5191 ACH" class="w-full px-3 py-2 rounded-xl border border-hairline focus:outline-none focus:border-teal-700" />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-ink mb-1">Status</label>
+            <select id="form-status" class="w-full px-3 py-2 rounded-xl border border-hairline bg-white focus:outline-none focus:border-teal-700">
+              <option value="active">Active</option>
+              <option value="overdue">Overdue / Failed</option>
+              <option value="unverified">Unverified</option>
+              <option value="paidup">Paid-Up / In-Force</option>
+              <option value="closed">Closed / Expired</option>
+            </select>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block font-semibold text-ink mb-1">Notes</label>
+            <textarea id="form-notes" rows="2" placeholder="Additional details, Policybazaar Ref, or lock-in info..." class="w-full px-3 py-2 rounded-xl border border-hairline focus:outline-none focus:border-teal-700"></textarea>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-hairline">
+          <label class="inline-flex items-center gap-2 cursor-pointer">
+            <input id="form-notify" type="checkbox" checked class="rounded border-hairline text-tealbrand focus:ring-teal-700" />
+            <span class="font-medium text-ink">Notify me 1 day before due date (T-1)</span>
+          </label>
+          <div class="flex items-center gap-2">
+            <button id="btn-cancel-modal" type="button" class="px-4 py-2 rounded-xl border border-hairline text-muted hover:text-ink transition">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-xl bg-obsidian hover:bg-slate-800 text-white font-semibold shadow-sm transition">Save Item</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm"></div>
+
+  <script>
+    const STORAGE_KEY = 'kamaledger_v2_state';
+    const TODAY_STR = '2026-11-22';
+
+    const CATEGORIES = [
+      { id: 'all', label: 'All Active', icon: 'layers' },
+      { id: 'protection', label: 'Protection & Health', icon: 'shield-check' },
+      { id: 'ulip', label: 'ULIPs & Endowment', icon: 'trending-up' },
+      { id: 'mf', label: 'Mutual Funds & RD', icon: 'pie-chart' },
+      { id: 'loan', label: 'Loans & EMIs', icon: 'landmark' },
+      { id: 'credit_card', label: 'Credit Cards', icon: 'credit-card' },
+      { id: 'subscription', label: 'Subscriptions', icon: 'sparkles' },
+      { id: 'archived', label: 'Closed & Archived', icon: 'archive' }
+    ];
+
+    const CATEGORY_META = {
+      protection: { name: 'Protection & Health', color: '#0D7369', badge: 'bg-teal-50/90 text-teal-900 border-teal-200/80' },
+      ulip: { name: 'ULIPs & Endowment', color: '#4338CA', badge: 'bg-indigo-50/90 text-indigo-900 border-indigo-200/80' },
+      mf: { name: 'Mutual Funds & RD', color: '#0284C7', badge: 'bg-sky-50/90 text-sky-900 border-sky-200/80' },
+      loan: { name: 'Loans & EMIs', color: '#B45309', badge: 'bg-amber-50/90 text-amber-900 border-amber-200/80' },
+      credit_card: { name: 'Credit Cards', color: '#E11D48', badge: 'bg-rose-50/90 text-rose-900 border-rose-200/80' },
+      subscription: { name: 'Subscriptions', color: '#7C3AED', badge: 'bg-violet-50/90 text-violet-900 border-violet-200/80' },
+      archived: { name: 'Closed & Archived', color: '#64748B', badge: 'bg-stone-100 text-stone-700 border-stone-200' }
+    };
+
+    const INITIAL_ITEMS = [
+      // 1. Protection & Health Insurance
+      {
+        id: 'icici-iprotect',
+        name: 'ICICI Life iProtect Smart (Term Life)',
+        category: 'protection',
+        provider: 'ICICI Life • Policybazaar',
+        ref: 'Policy J5156869 | PB 662189650',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 9639,
+        cycle: 'Monthly',
+        nextDueDate: '2026-12-02',
+        payUntil: 'Jul 2034 (10-Yr Limited Pay)',
+        paymentMethod: 'NetBanking Auto-Debit (Pref. 15th)',
+        status: 'active',
+        notifyT1: true,
+        paidThisCycle: false,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1882206596443106388',
+        notes: '₹2 Cr life cover. Paid ₹9,639 on Nov 16, 2026; next auto-debit Dec 2, 2026.'
+      },
+      {
+        id: 'hdfc-click2protect',
+        name: 'HDFC Life Click2 Protect Super (Term Life)',
+        category: 'protection',
+        provider: 'HDFC Life • Policybazaar',
+        ref: 'Policy 27635036 | PB 662275270',
+        holder: 'Mrs. Rinki Kumari Pandit',
+        amount: 2364,
+        cycle: 'Monthly',
+        nextDueDate: '2026-12-08',
+        payUntil: 'Per Policy Term (Unverified in email)',
+        paymentMethod: 'Debit Card 8567 E-mandate (PB)',
+        status: 'active',
+        notifyT1: true,
+        paidThisCycle: false,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1882118964936311527',
+        notes: '₹1 Cr cover. PB debited ₹2,364 on Nov 16, 2026; HDFC A/c 5191 AutoPay failed Nov 19.'
+      },
+      {
+        id: 'hdfc-ergo-health',
+        name: 'HDFC ERGO Optima Restore Family (Health)',
+        category: 'protection',
+        provider: 'HDFC ERGO General Insurance',
+        ref: 'Policy 2805203651803906',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 25092,
+        amountEstimated: true,
+        cycle: 'Annual',
+        nextDueDate: '2026-12-30',
+        payUntil: 'Ongoing Annual Renewal',
+        paymentMethod: 'Manual / Auto-Renewal',
+        status: 'active',
+        notifyT1: true,
+        paidThisCycle: false,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1882231521394912478',
+        notes: '2026 renewal notice omits ₹ amount (₹25,092 shown is from Nov 2024 renewal).'
+      },
+
+      // 2. ULIPs & Endowment
+      {
+        id: 'tata-aia-ulip',
+        name: 'Tata AIA Smart SIP - Wealth Secure (ULIP)',
+        category: 'ulip',
+        provider: 'Tata AIA Life • Policybazaar',
+        ref: 'Policy U242310105 | PB 1238304958',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 6000,
+        cycle: 'Monthly',
+        nextDueDate: '2026-12-08',
+        payUntil: 'Jul 2031 min (5-Yr Lock-in from Jul 2026)',
+        paymentMethod: 'UPI Autopay (₹6,002 limit)',
+        status: 'active',
+        notifyT1: true,
+        paidThisCycle: false,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1881645165224354696',
+        notes: 'Fund value ₹29,328.40 as of Nov 11, 2026; ₹6,000 paid Nov 10, 2026.'
+      },
+      {
+        id: 'axis-max-ulip',
+        name: 'Axis Max Life Online Savings Plan (ULIP)',
+        category: 'ulip',
+        provider: 'Axis Max Life • Policybazaar',
+        ref: 'Policy 638387688 | PB 1040819694',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 5000,
+        cycle: 'Monthly',
+        nextDueDate: '2026-11-16',
+        payUntil: 'Per Policy Term (Started Jan 2026)',
+        paymentMethod: 'UPI Autopay (₹5,002 limit)',
+        status: 'overdue',
+        notifyT1: true,
+        paidThisCycle: false,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1882481952944977250',
+        notes: 'Nov 16, 2026 auto-debit failed (insufficient funds); PayNow reminder sent Nov 21.'
+      },
+      {
+        id: 'hdfc-classic-assure',
+        name: 'HDFC Life ClassicAssure Plus (Endowment)',
+        category: 'ulip',
+        provider: 'HDFC Life',
+        ref: 'Policy 20310027',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 0,
+        cycle: 'One-Time',
+        nextDueDate: '',
+        payUntil: 'PPT Done Apr 2025; Matures Apr 2028',
+        paymentMethod: '7-Yr PPT Complete (₹2,45,000 paid)',
+        status: 'paidup',
+        notifyT1: false,
+        paidThisCycle: true,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1872075252562166847',
+        notes: 'In-force as of Mar 31, 2026. Has an active Policy Loan (tracked under Loans).'
+      },
+
+      // 3. Mutual Funds & RD
+      {
+        id: 'nippon-sip-1',
+        name: 'Nippon India Mutual Fund — SIP 1',
+        category: 'mf',
+        provider: 'Nippon India MF',
+        ref: 'Reg. RMDIRECT-L45194',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 2000,
+        amountEstimated: true,
+        cycle: 'Monthly',
+        nextDueDate: '2026-12-12',
+        payUntil: 'Ongoing (Until Cancelled)',
+        paymentMethod: 'HDFC A/c 5191 ACH AutoPay',
+        status: 'overdue',
+        notifyT1: true,
+        paidThisCycle: false,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1881633028297267611',
+        notes: 'Nov 12, 2026 ACH failed (insufficient funds). ₹2,000 based on 2022–23 SmartPay; verify current amount in Oct 2026 CDSL eCAS.'
+      },
+      {
+        id: 'nippon-sip-2',
+        name: 'Nippon India Mutual Fund — SIP 2',
+        category: 'mf',
+        provider: 'Nippon India MF',
+        ref: 'Reg. RMDIRECT-G08162',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 2000,
+        amountEstimated: true,
+        cycle: 'Monthly',
+        nextDueDate: '2026-12-12',
+        payUntil: 'Ongoing (Until Cancelled)',
+        paymentMethod: 'HDFC A/c 5191 ACH AutoPay',
+        status: 'overdue',
+        notifyT1: true,
+        paidThisCycle: false,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1881633028297267611',
+        notes: 'Nov 12, 2026 ACH failed (insufficient funds). ₹2,000 based on 2022–23 SmartPay; verify current amount in Oct 2026 CDSL eCAS.'
+      },
+      {
+        id: 'hdfc-rd',
+        name: 'HDFC Bank Recurring Deposit',
+        category: 'mf',
+        provider: 'HDFC Bank',
+        ref: 'RD No. XXXXX8530',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 3000,
+        cycle: 'Monthly',
+        nextDueDate: '2026-12-04',
+        payUntil: 'Until RD Maturity',
+        paymentMethod: 'HDFC A/c 5191 Auto-Debit',
+        status: 'active',
+        notifyT1: true,
+        paidThisCycle: false,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1880442592708761843',
+        notes: 'Monthly instalment ₹3,000 due on the 4th of each month.'
+      },
+
+      // 4. Loans & Debt EMIs
+      {
+        id: 'hdfc-policy-loan',
+        name: 'HDFC Life Loan against Policy (20310027)',
+        category: 'loan',
+        provider: 'HDFC Life',
+        ref: 'HDFCLAP0120310027 / LAP0220310027',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 6546,
+        cycle: 'Monthly',
+        nextDueDate: '2026-12-08',
+        payUntil: 'Until Loan Payoff / Apr 2028',
+        paymentMethod: 'HDFC A/c 5191 ACH (UMRN HDFC7021908252004570)',
+        status: 'active',
+        notifyT1: true,
+        paidThisCycle: false,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1881300439884107726',
+        notes: '₹1,16,235 disbursed Sep 28, 2024; ₹6,546 debited Nov 8, 2026. Check DOB-protected statement for balance.'
+      },
+      {
+        id: 'tata-capital-loan',
+        name: 'Tata Capital Loan',
+        category: 'loan',
+        provider: 'Tata Capital Limited',
+        ref: 'Loan ...5154 | EN7812051172869350',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 6120,
+        cycle: 'Monthly',
+        nextDueDate: '2026-12-04',
+        payUntil: 'Until Loan Tenure Ends',
+        paymentMethod: 'HDFC A/c 5191 ACH (UMRN HDFC7020512251012565)',
+        status: 'active',
+        notifyT1: true,
+        paidThisCycle: false,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1880910815572293208',
+        notes: '₹6,120 debited Nov 4, 2026 (Sep 4 payment advice was ₹6,126).'
+      },
+      {
+        id: 'hdfc-noswipe-emi',
+        name: 'HDFC Bank No Swipe EMI Loan',
+        category: 'loan',
+        provider: 'HDFC Bank',
+        ref: 'Loan 464614715 | HDFCde61fc0f52e',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: null,
+        cycle: 'Unverified',
+        nextDueDate: '',
+        payUntil: 'Unverified (Opened Nov 2024)',
+        paymentMethod: 'HDFC Bank',
+        status: 'unverified',
+        notifyT1: false,
+        paidThisCycle: false,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1815412991138301712',
+        notes: 'Repayment schedule ZIP (464614715.zip) is password-protected; verify in NetBanking if still active.'
+      },
+
+      // 5. Credit Cards
+      {
+        id: 'hdfc-rupay-cc',
+        name: 'HDFC Bank RuPay Bharat Cashback Intl Credit Card',
+        category: 'credit_card',
+        provider: 'HDFC Bank Credit Cards',
+        ref: 'Card 652850XXXXXX8868',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: null,
+        cycle: 'Monthly',
+        nextDueDate: '',
+        payUntil: 'Unverified (Statements Jun 2018–Nov 2020)',
+        paymentMethod: 'HDFC Bank AutoPay / BillPay',
+        status: 'unverified',
+        notifyT1: true,
+        paidThisCycle: false,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1683490148000302542',
+        notes: 'No 2025–2026 credit card statements found in Gmail. Click Edit to enter your current Total Amount Due & due date, or click + Add Item for other cards.'
+      },
+
+      // 6. Digital & AI Subscriptions
+      {
+        id: 'claude-pro',
+        name: 'Claude Pro',
+        category: 'subscription',
+        provider: 'Anthropic',
+        ref: 'Receipt #2490-4002-0968',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 2399,
+        cycle: 'Monthly',
+        nextDueDate: '2026-12-06',
+        payUntil: 'Ongoing (Until Cancelled)',
+        paymentMethod: 'HDFC Debit Card 8567 E-mandate',
+        status: 'active',
+        notifyT1: true,
+        paidThisCycle: false,
+        sourceUrl: 'https://claude.ai/settings/billing',
+        notes: '₹2,033.05 + 18% GST. Auto-renews monthly on the 6th.'
+      },
+      {
+        id: 'chatgpt-plus',
+        name: 'ChatGPT Plus',
+        category: 'subscription',
+        provider: 'OpenAI',
+        ref: 'UPI Debit Alert',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 1688.02,
+        cycle: 'Monthly',
+        nextDueDate: '2026-12-11',
+        payUntil: 'Ongoing (Until Cancelled)',
+        paymentMethod: 'HDFC A/c 5191 (UPI)',
+        status: 'active',
+        notifyT1: true,
+        paidThisCycle: false,
+        sourceUrl: 'https://chatgpt.com/#settings/Subscription',
+        notes: 'Price from Nov 11, 2026 UPI debit alert; renewal date inferred.'
+      },
+      {
+        id: 'google-ai-pro',
+        name: 'Google AI Pro',
+        category: 'subscription',
+        provider: 'Google One',
+        ref: 'Subscriber Benefit Emails',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: null,
+        cycle: 'Unverified',
+        nextDueDate: '',
+        payUntil: 'Ongoing (Until Cancelled)',
+        paymentMethod: 'Unverified (Check Google Play / One)',
+        status: 'unverified',
+        notifyT1: false,
+        paidThisCycle: false,
+        sourceUrl: 'https://one.google.com/settings',
+        notes: 'Active per Sep–Oct 2026 benefit emails; billing receipt not in Gmail.'
+      },
+
+      // 7. Closed & Archived
+      {
+        id: 'sbi-6202',
+        name: 'SBI Personal Loan',
+        category: 'archived',
+        provider: 'State Bank of India',
+        ref: 'A/c XXXXXXXXXXXXX6202',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 0,
+        cycle: 'One-Time',
+        nextDueDate: '',
+        payUntil: 'Closed / Clear (Feb 2026)',
+        paymentMethod: 'N/A',
+        status: 'closed',
+        notifyT1: false,
+        paidThisCycle: true,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1856654402248210588',
+        notes: 'Experian overdue dispute filed Feb 2026; SBI statement confirmed zero overdue.'
+      },
+      {
+        id: 'idfc-2211',
+        name: 'IDFC FIRST Flipkart Consumer Loan',
+        category: 'archived',
+        provider: 'IDFC FIRST Bank',
+        ref: 'A/c XXXXXXXXXXXXX2211',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 0,
+        cycle: 'One-Time',
+        nextDueDate: '',
+        payUntil: 'Closed (Feb 3, 2026)',
+        paymentMethod: 'N/A',
+        status: 'closed',
+        notifyT1: false,
+        paidThisCycle: true,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1856019266249363683',
+        notes: 'Closure processed Feb 3, 2026; NDC requested Feb 6, 2026.'
+      },
+      {
+        id: 'indusind-180h',
+        name: 'IndusInd Bank Two-Wheeler Loan',
+        category: 'archived',
+        provider: 'IndusInd Bank',
+        ref: 'Loan SKM00180H',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 0,
+        cycle: 'One-Time',
+        nextDueDate: '',
+        payUntil: 'Closed (NOC Issued Jun 2014)',
+        paymentMethod: 'N/A',
+        status: 'closed',
+        notifyT1: false,
+        paidThisCycle: true,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1856739957814591567',
+        notes: 'Original NOC expired; ₹590 duplicate NOC fee noted Feb 10, 2026.'
+      },
+      {
+        id: 'hdfc-closed-2023',
+        name: 'HDFC Bank Loans (128913628 & 56325012)',
+        category: 'archived',
+        provider: 'HDFC Bank',
+        ref: '128913628 & 56325012',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 0,
+        cycle: 'One-Time',
+        nextDueDate: '',
+        payUntil: 'Closed (Mar & Jun 2023)',
+        paymentMethod: 'N/A',
+        status: 'closed',
+        notifyT1: false,
+        paidThisCycle: true,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1768957785695006307',
+        notes: 'Both HDFC Bank loan accounts officially closed in 2023.'
+      },
+      {
+        id: 'pb-older-2023-24',
+        name: 'Policybazaar Older Policies (National 2W, Kotak 2W & PA)',
+        category: 'archived',
+        provider: 'Policybazaar',
+        ref: '625076451, 525564883, 525566181',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: 0,
+        cycle: 'Annual',
+        nextDueDate: '',
+        payUntil: '2023–2024 Policies (No 2025/26 renewal)',
+        paymentMethod: 'One-Time / Expired',
+        status: 'closed',
+        notifyT1: false,
+        paidThisCycle: true,
+        sourceUrl: 'https://mail.google.com/mail/?authuser=kamalesh.pandit14@gmail.com#all/thread-f:1788981898245737756',
+        notes: 'Two-wheeler (AS01BE4376) & Personal Accident policies from Jan 2023 & Jan 2024.'
+      }
+    ];
+
+    let state = {
+      items: [],
+      activeCategory: 'all',
+      search: '',
+      statusFilter: 'all'
+    };
+
+    let chartInstance = null;
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            state.items = parsed;
+            return;
+          }
+        }
+      } catch (e) {}
+      state.items = JSON.parse(JSON.stringify(INITIAL_ITEMS));
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
+      } catch (e) {}
+    }
+
+    function parseDate(str) {
+      if (!str) return null;
+      const [y, m, d] = str.split('-').map(Number);
+      if (!y || !m || !d) return null;
+      return new Date(y, m - 1, d);
+    }
+
+    function formatDate(str) {
+      const d = parseDate(str);
+      if (!d) return '—';
+      return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function getT1DateStr(dueStr) {
+      const d = parseDate(dueStr);
+      if (!d) return '';
+      d.setDate(d.getDate() - 1);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function daysBetween(strA, strB) {
+      const a = parseDate(strA);
+      const b = parseDate(strB);
+      if (!a || !b) return null;
+      return Math.round((b - a) / (1000 * 60 * 60 * 24));
+    }
+
+    function formatINR(val) {
+      if (val === null || val === undefined || isNaN(val)) return 'Unverified';
+      return '₹' + Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function showToast(title, message, tone = 'teal') {
+      const container = document.getElementById('toast-container');
+      const colors = {
+        teal: 'border-teal-200 bg-white text-ink',
+        amber: 'border-amber-200 bg-amber-50 text-amber-950',
+        rose: 'border-rose-200 bg-rose-50 text-rose-950'
+      };
+      const el = document.createElement('div');
+      el.className = `rounded-2xl border p-3.5 shadow-xl flex items-start gap-2.5 text-xs transition-all ${colors[tone] || colors.teal}`;
+      el.innerHTML = `
+        <div class="mt-0.5 shrink-0">
+          <i data-lucide="bell-ring" class="w-4 h-4 text-tealbrand"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold">${escapeHtml(title)}</p>
+          <p class="text-muted mt-0.5">${escapeHtml(message)}</p>
+        </div>
+      `;
+      container.appendChild(el);
+      if (window.lucide) lucide.createIcons({ nodes: [el] });
+      setTimeout(() => {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 250);
+      }, 4200);
+    }
+
+    function buildIcsContent(items) {
+      const lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Subscription Tracker//T1 Payment Reminders//EN',
+        'CALSCALE:GREGORIAN'
+      ];
+      items.forEach(item => {
+        if (!item.nextDueDate) return;
+        const dt = item.nextDueDate.replace(/-/g, '');
+        const amtText = item.amount !== null && item.amount !== undefined ? formatINR(item.amount) : 'Amount Unverified';
+        const rrule = item.cycle === 'Monthly' ? 'RRULE:FREQ=MONTHLY' : item.cycle === 'Annual' ? 'RRULE:FREQ=YEARLY' : '';
+        lines.push('BEGIN:VEVENT');
+        lines.push(`UID:${item.id}@kamaledger`);
+        lines.push(`DTSTART;VALUE=DATE:${dt}`);
+        lines.push(`SUMMARY:Due: ${item.name} (${amtText})`);
+        lines.push(`DESCRIPTION:Ref: ${item.ref || 'N/A'}\\nPay Until: ${item.payUntil || 'Ongoing'}\\nMethod: ${item.paymentMethod || 'N/A'}`);
+        if (rrule) lines.push(rrule);
+        lines.push('BEGIN:VALARM');
+        lines.push('ACTION:DISPLAY');
+        lines.push(`DESCRIPTION:Reminder (1 Day Before): ${item.name} (${amtText}) due tomorrow`);
+        lines.push('TRIGGER:-P1D');
+        lines.push('END:VALARM');
+        lines.push('END:VEVENT');
+      });
+      lines.push('END:VCALENDAR');
+      return lines.join('\r\n');
+    }
+
+    function downloadIcs(items, filename) {
+      const valid = items.filter(i => i.nextDueDate);
+      if (valid.length === 0) {
+        showToast('No Due Date Set', 'Add a due date first to export a T-1 calendar reminder.', 'amber');
+        return;
+      }
+      const content = buildIcsContent(valid);
+      const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast('Calendar File Downloaded', `${valid.length} T-1 reminder(s) exported to ${filename}.`);
+    }
+
+    function render() {
+      renderKPIs();
+      renderUrgentBanner();
+      renderTabs();
+      renderChart();
+      renderTimeline();
+      renderLedger();
+      renderDrawer();
+      updateBrowserPermLabel();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderKPIs() {
+      const activeItems = state.items.filter(i => i.category !== 'archived' && i.status !== 'closed');
+      let monthlyTotal = 0;
+      let annualOnlyTotal = 0;
+      let armedCount = 0;
+      let issueCount = 0;
+      let nextT1 = null;
+
+      activeItems.forEach(item => {
+        if (item.cycle === 'Monthly' && typeof item.amount === 'number' && !item.paidThisCycle) {
+          monthlyTotal += item.amount;
+        }
+        if (item.cycle === 'Annual' && typeof item.amount === 'number') {
+          annualOnlyTotal += item.amount;
+        }
+        if (item.notifyT1 && item.nextDueDate) {
+          armedCount++;
+          const t1 = getT1DateStr(item.nextDueDate);
+          if (!nextT1 || t1 < nextT1.t1) {
+            nextT1 = { t1, name: item.name };
+          }
+        }
+        if (item.status === 'overdue' || item.status === 'unverified') {
+          issueCount++;
+        }
+      });
+
+      document.getElementById('kpi-monthly').textContent = formatINR(monthlyTotal);
+      document.getElementById('chart-center-total').textContent = formatINR(monthlyTotal);
+      document.getElementById('kpi-annual').textContent = `Annualized: ${formatINR(monthlyTotal * 12)} / yr`;
+      document.getElementById('kpi-yearly-only').textContent = formatINR(annualOnlyTotal);
+      document.getElementById('kpi-t1-armed').textContent = armedCount;
+      document.getElementById('kpi-t1-total').textContent = `of ${activeItems.length} active`;
+      document.getElementById('kpi-next-t1').textContent = nextT1 ? `Next alert: ${formatDate(nextT1.t1)} (${nextT1.name.split(' ')[0]})` : 'No upcoming alerts';
+      document.getElementById('kpi-issues').textContent = issueCount;
+      document.getElementById('t1-badge-count').textContent = armedCount;
+    }
+
+    function renderUrgentBanner() {
+      const overdue = state.items.filter(i => i.status === 'overdue' && !i.paidThisCycle);
+      const banner = document.getElementById('urgent-banner');
+      if (overdue.length === 0) {
+        banner.classList.add('hidden');
+        return;
+      }
+      banner.classList.remove('hidden');
+      const totalOverdue = overdue.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+      document.getElementById('urgent-title').textContent = `${overdue.length} Overdue / Failed Auto-Debits (${formatINR(totalOverdue)})`;
+      document.getElementById('urgent-desc').textContent = overdue.map(i => i.name).join(' • ');
+    }
+
+    function renderTabs() {
+      const container = document.getElementById('category-tabs');
+      container.innerHTML = '';
+      CATEGORIES.forEach(cat => {
+        const count = cat.id === 'all'
+          ? state.items.filter(i => i.category !== 'archived').length
+          : state.items.filter(i => i.category === cat.id).length;
+        const isActive = state.activeCategory === cat.id;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition ${
+          isActive
+            ? 'bg-obsidian text-white shadow-sm'
+            : 'bg-white border border-hairline text-muted hover:text-ink hover:bg-stone-50'
+        }`;
+        btn.innerHTML = `
+          <i data-lucide="${cat.icon}" class="w-3.5 h-3.5"></i>
+          <span>${cat.label}</span>
+          <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold tabular-nums ${isActive ? 'bg-white/20 text-white' : 'bg-stone-100 text-muted'}">${count}</span>
+        `;
+        btn.addEventListener('click', () => {
+          state.activeCategory = cat.id;
+          render();
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    function renderChart() {
+      const ctx = document.getElementById('categoryChart');
+      if (!ctx || !window.Chart) return;
+      const cats = ['protection', 'ulip', 'mf', 'loan', 'credit_card', 'subscription'];
+      const totals = cats.map(c =>
+        state.items
+          .filter(i => i.category === c && i.cycle === 'Monthly' && typeof i.amount === 'number')
+          .reduce((s, i) => s + i.amount, 0)
+      );
+      const labels = cats.map(c => CATEGORY_META[c].name);
+      const colors = cats.map(c => CATEGORY_META[c].color);
+
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: totals,
+            backgroundColor: colors,
+            borderWidth: 2.5,
+            borderColor: '#FFFFFF',
+            hoverOffset: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '68%',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#0B111E',
+              padding: 10,
+              cornerRadius: 8,
+              callbacks: {
+                label: (c) => ` ${c.label}: ${formatINR(c.raw)} / mo`
+              }
+            }
+          }
+        }
+      });
+
+      const legendEl = document.getElementById('chart-legend');
+      if (legendEl) {
+        legendEl.innerHTML = cats.map((c, idx) => `
+          <div class="flex items-center justify-between gap-2 py-1 border-b border-hairline/50 last:border-b-0">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${colors[idx]}"></span>
+              <span class="text-ink font-medium truncate">${escapeHtml(labels[idx])}</span>
+            </div>
+            <span class="font-semibold text-ink tabular-nums shrink-0">${formatINR(totals[idx])}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    function renderTimeline() {
+      const container = document.getElementById('timeline-list');
+      const upcoming = state.items
+        .filter(i => i.category !== 'archived' && i.nextDueDate)
+        .sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate));
+
+      if (upcoming.length === 0) {
+        container.innerHTML = '<p class="text-xs text-muted py-8 text-center">No dated upcoming commitments.</p>';
+        return;
+      }
+
+      container.innerHTML = '';
+      upcoming.forEach(item => {
+        const t1 = getT1DateStr(item.nextDueDate);
+        const diff = daysBetween(TODAY_STR, item.nextDueDate);
+        const isPast = diff !== null && diff < 0;
+        const meta = CATEGORY_META[item.category];
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between gap-3 p-3 rounded-xl border border-hairline bg-[#FAF9F5] hover:bg-white hover:shadow-sm transition';
+        row.innerHTML = `
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-12 text-center py-1.5 px-1.5 rounded-lg border ${isPast ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-white border-hairline text-ink shadow-2xs'} shrink-0">
+              <div class="text-[9px] font-semibold uppercase tracking-wider">${parseDate(item.nextDueDate).toLocaleDateString('en-IN', { month: 'short' })}</div>
+              <div class="font-serif text-base font-semibold tabular-nums leading-tight">${parseDate(item.nextDueDate).getDate()}</div>
+            </div>
+            <div class="min-w-0">
+              <p class="text-xs font-semibold text-ink truncate">${escapeHtml(item.name)}</p>
+              <div class="flex items-center gap-2 mt-0.5 text-[11px] text-muted">
+                <span class="inline-flex items-center gap-1 ${item.notifyT1 ? 'text-amber-700 font-medium' : 'text-muted'}">
+                  <i data-lucide="bell" class="w-3 h-3"></i>
+                  ${item.notifyT1 ? `T-1: ${formatDate(t1)}` : 'T-1 Off'}
+                </span>
+                <span>•</span>
+                <span class="truncate">${escapeHtml(meta.name)}</span>
+              </div>
+            </div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-xs font-semibold text-ink tabular-nums">${formatINR(item.amount)}</div>
+            <div class="text-[10px] ${isPast ? 'text-rose-700 font-semibold' : 'text-muted'}">
+              ${isPast ? `${Math.abs(diff)}d overdue` : diff === 0 ? 'Due today' : `In ${diff}d`}
+            </div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function getFilteredItems() {
+      const q = state.search.trim().toLowerCase();
+      return state.items.filter(item => {
+        if (state.activeCategory === 'all' && item.category === 'archived') return false;
+        if (state.activeCategory !== 'all' && item.category !== state.activeCategory) return false;
+
+        if (state.statusFilter === 'active' && item.status !== 'active') return false;
+        if (state.statusFilter === 'attention' && item.status !== 'overdue') return false;
+        if (state.statusFilter === 'unverified' && item.status !== 'unverified' && !item.amountEstimated) return false;
+        if (state.statusFilter === 'paid' && !item.paidThisCycle) return false;
+
+        if (q) {
+          const hay = `${item.name} ${item.provider} ${item.ref} ${item.paymentMethod} ${item.payUntil} ${item.notes}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function statusBadgeHtml(item) {
+      if (item.paidThisCycle && item.category !== 'archived' && item.status !== 'paidup') {
+        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200/80"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Paid (Cycle)</span>`;
+      }
+      switch (item.status) {
+        case 'active':
+          return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200/80"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Active</span>`;
+        case 'overdue':
+          return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-600 dot-pulse"></span>Overdue / Failed</span>`;
+        case 'unverified':
+          return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Unverified</span>`;
+        case 'paidup':
+          return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-800 border border-indigo-200"><span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>PPT Complete</span>`;
+        default:
+          return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-stone-700 border border-stone-200"><span class="w-1.5 h-1.5 rounded-full bg-stone-400"></span>Closed</span>`;
+      }
+    }
+
+    function renderLedger() {
+      const items = getFilteredItems();
+      const tbody = document.getElementById('ledger-tbody');
+      const cards = document.getElementById('ledger-cards');
+      const empty = document.getElementById('empty-state');
+
+      tbody.innerHTML = '';
+      cards.innerHTML = '';
+
+      if (items.length === 0) {
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      items.forEach(item => {
+        const meta = CATEGORY_META[item.category];
+        const t1Date = getT1DateStr(item.nextDueDate);
+
+        // Desktop Row
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-[#FAF9F5] transition align-top group';
+        tr.innerHTML = `
+          <td class="py-4 px-5 max-w-xs">
+            <div class="flex items-center gap-1.5 flex-wrap mb-1.5">
+              <span class="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold border ${meta.badge}">${meta.name}</span>
+              ${item.amountEstimated ? '<span class="inline-flex px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200">Est.</span>' : ''}
+            </div>
+            <div class="font-semibold text-ink text-[13px] leading-snug">${escapeHtml(item.name)}</div>
+            <div class="text-[11px] text-muted font-mono mt-0.5">${escapeHtml(item.ref)}</div>
+            <div class="text-[11px] text-muted mt-0.5">${escapeHtml(item.paymentMethod)}</div>
+          </td>
+          <td class="py-4 px-4 whitespace-nowrap">
+            <div class="font-semibold text-ink text-[13px] tabular-nums">${formatINR(item.amount)}</div>
+            <div class="text-[11px] text-muted mt-0.5">${escapeHtml(item.cycle)}</div>
+          </td>
+          <td class="py-4 px-4 whitespace-nowrap">
+            <div class="font-medium text-ink tabular-nums">${formatDate(item.nextDueDate)}</div>
+            ${t1Date ? `<div class="text-[11px] text-amber-700 font-medium mt-0.5 tabular-nums">Notify: ${formatDate(t1Date)}</div>` : '<div class="text-[11px] text-muted mt-0.5">—</div>'}
+          </td>
+          <td class="py-4 px-4 max-w-[205px]">
+            <div class="text-xs text-ink font-medium">${escapeHtml(item.payUntil || '—')}</div>
+            <div class="text-[11px] text-muted mt-1 line-clamp-2" title="${escapeHtml(item.notes)}">${escapeHtml(item.notes)}</div>
+          </td>
+          <td class="py-4 px-4 whitespace-nowrap">
+            ${item.nextDueDate ? `
+              <button type="button" data-action="toggle-t1" data-id="${item.id}" class="inline-flex items-center gap-2 cursor-pointer">
+                <span class="w-9 h-5 rounded-full p-0.5 flex items-center toggle-track ${item.notifyT1 ? 'bg-tealbrand' : 'bg-stone-300'}">
+                  <span class="w-4 h-4 rounded-full bg-white shadow-sm toggle-thumb ${item.notifyT1 ? 'translate-x-4' : 'translate-x-0'}"></span>
+                </span>
+                <span class="text-[11px] font-semibold ${item.notifyT1 ? 'text-tealbrand' : 'text-muted'}">${item.notifyT1 ? 'On' : 'Off'}</span>
+              </button>
+            ` : '<span class="text-[11px] text-muted">No due date</span>'}
+          </td>
+          <td class="py-4 px-4 whitespace-nowrap">
+            ${statusBadgeHtml(item)}
+          </td>
+          <td class="py-4 px-5 whitespace-nowrap text-right">
+            <div class="inline-flex items-center gap-1">
+              ${item.category !== 'archived' && item.status !== 'paidup' ? `
+                <button type="button" data-action="toggle-paid" data-id="${item.id}" class="p-1.5 rounded-lg border border-hairline bg-white hover:bg-stone-100 text-ink transition" title="${item.paidThisCycle ? 'Unmark Paid' : 'Mark Paid This Cycle'}">
+                  <i data-lucide="${item.paidThisCycle ? 'rotate-ccw' : 'check-circle-2'}" class="w-3.5 h-3.5 ${item.paidThisCycle ? 'text-muted' : 'text-tealbrand'}"></i>
+                </button>
+              ` : ''}
+              ${item.nextDueDate ? `
+                <button type="button" data-action="ics" data-id="${item.id}" class="p-1.5 rounded-lg border border-hairline bg-white hover:bg-stone-100 text-ink transition" title="Download T-1 .ics Reminder">
+                  <i data-lucide="calendar-plus" class="w-3.5 h-3.5 text-indigo-600"></i>
+                </button>
+              ` : ''}
+              <button type="button" data-action="edit" data-id="${item.id}" class="p-1.5 rounded-lg border border-hairline bg-white hover:bg-stone-100 text-ink transition" title="Edit Details">
+                <i data-lucide="pencil" class="w-3.5 h-3.5 text-muted"></i>
+              </button>
+              ${item.sourceUrl ? `
+                <a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noopener noreferrer" class="p-1.5 rounded-lg border border-hairline bg-white hover:bg-stone-100 text-ink transition" title="Open Gmail / Billing Source">
+                  <i data-lucide="external-link" class="w-3.5 h-3.5 text-muted"></i>
+                </a>
+              ` : ''}
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+
+        // Mobile / Tablet Card
+        const card = document.createElement('div');
+        card.className = 'p-4 space-y-3 bg-white';
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap mb-1.5">
+                <span class="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold border ${meta.badge}">${meta.name}</span>
+                ${statusBadgeHtml(item)}
+              </div>
+              <h4 class="text-sm font-semibold text-ink break-words">${escapeHtml(item.name)}</h4>
+              <p class="text-[11px] font-mono text-muted mt-0.5 break-all">${escapeHtml(item.ref)}</p>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-sm font-semibold text-ink tabular-nums">${formatINR(item.amount)}</div>
+              <div class="text-[11px] text-muted">${escapeHtml(item.cycle)}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5 text-xs bg-[#FAF9F5] rounded-xl p-3 border border-hairline">
+            <div class="min-w-0">
+              <span class="text-[10px] font-semibold uppercase tracking-wider text-muted block">Next Due</span>
+              <span class="font-medium text-ink tabular-nums">${formatDate(item.nextDueDate)}</span>
+            </div>
+            <div class="min-w-0">
+              <span class="text-[10px] font-semibold uppercase tracking-wider text-muted block">Pay Until</span>
+              <span class="font-medium text-ink break-words">${escapeHtml(item.payUntil || '—')}</span>
+            </div>
+          </div>
+
+          <p class="text-[11px] text-muted leading-relaxed break-words">${escapeHtml(item.notes)}</p>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+            ${item.nextDueDate ? `
+              <button type="button" data-action="toggle-t1" data-id="${item.id}" class="inline-flex items-center gap-2 text-xs py-1">
+                <span class="w-9 h-5 rounded-full p-0.5 flex items-center toggle-track ${item.notifyT1 ? 'bg-tealbrand' : 'bg-stone-300'}">
+                  <span class="w-4 h-4 rounded-full bg-white shadow-sm toggle-thumb ${item.notifyT1 ? 'translate-x-4' : 'translate-x-0'}"></span>
+                </span>
+                <span class="font-semibold ${item.notifyT1 ? 'text-tealbrand' : 'text-muted'}">T-1: ${formatDate(t1Date)}</span>
+              </button>
+            ` : '<span class="text-[11px] text-muted">No due date</span>'}
+
+            <div class="flex items-center gap-1.5 flex-wrap">
+              ${item.category !== 'archived' && item.status !== 'paidup' ? `<button type="button" data-action="toggle-paid" data-id="${item.id}" class="px-2.5 py-1.5 rounded-lg border border-hairline text-[11px] font-medium ${item.paidThisCycle ? 'text-muted bg-stone-50' : 'text-tealbrand bg-teal-50/50'}">${item.paidThisCycle ? 'Unpaid' : 'Mark Paid'}</button>` : ''}
+              ${item.nextDueDate ? `<button type="button" data-action="ics" data-id="${item.id}" class="px-2.5 py-1.5 rounded-lg border border-hairline text-[11px] font-medium text-ink">.ics</button>` : ''}
+              <button type="button" data-action="edit" data-id="${item.id}" class="px-2.5 py-1.5 rounded-lg border border-hairline text-[11px] font-medium text-ink">Edit</button>
+              ${item.sourceUrl ? `<a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-lg border border-hairline text-[11px] font-medium text-tealbrand">Source</a>` : ''}
+            </div>
+          </div>
+        `;
+        cards.appendChild(card);
+      });
+    }
+
+    function renderDrawer() {
+      const list = document.getElementById('drawer-list');
+      const armed = state.items
+        .filter(i => i.notifyT1 && i.nextDueDate && i.category !== 'archived')
+        .sort((a, b) => getT1DateStr(a.nextDueDate).localeCompare(getT1DateStr(b.nextDueDate)));
+
+      list.innerHTML = '';
+      if (armed.length === 0) {
+        list.innerHTML = '<p class="text-xs text-muted text-center py-8">No T-1 reminders armed. Toggle "Notify 1 Day Before" on any item.</p>';
+        return;
+      }
+
+      armed.forEach(item => {
+        const t1 = getT1DateStr(item.nextDueDate);
+        const daysToNotify = daysBetween(TODAY_STR, t1);
+        const urgency = daysToNotify <= 0 ? 'border-rose-200 bg-rose-50/60' : daysToNotify <= 7 ? 'border-amber-200 bg-amber-50/50' : 'border-hairline bg-white';
+        const el = document.createElement('div');
+        el.className = `rounded-xl border p-3.5 ${urgency}`;
+        el.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="text-xs font-semibold text-ink">${escapeHtml(item.name)}</p>
+              <p class="text-[11px] text-muted mt-0.5">Due: <span class="font-medium text-ink">${formatDate(item.nextDueDate)}</span> • ${formatINR(item.amount)}</p>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${daysToNotify <= 0 ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-900'}">
+              ${daysToNotify < 0 ? 'Passed / Overdue' : daysToNotify === 0 ? 'Notify Today' : `T-1 in ${daysToNotify}d`}
+            </span>
+          </div>
+          <div class="mt-2 pt-2 border-t border-hairline/70 flex items-center justify-between text-[11px]">
+            <span class="text-amber-800 font-medium">Alert Date: ${formatDate(t1)}</span>
+            <button type="button" data-action="ics" data-id="${item.id}" class="text-tealbrand font-semibold hover:underline">Add to Calendar (.ics)</button>
+          </div>
+        `;
+        list.appendChild(el);
+      });
+    }
+
+    function updateBrowserPermLabel() {
+      const label = document.getElementById('browser-perm-status');
+      const btn = document.getElementById('btn-enable-browser-notify');
+      if (!('Notification' in window)) {
+        label.textContent = 'Not supported in this browser (using in-app alerts)';
+        btn.disabled = true;
+        btn.classList.add('opacity-50');
+        return;
+      }
+      if (Notification.permission === 'granted') {
+        label.textContent = 'Enabled — you will receive desktop/browser alerts';
+        btn.textContent = 'Enabled';
+      } else if (Notification.permission === 'denied') {
+        label.textContent = 'Blocked in browser settings (using in-app alerts)';
+      } else {
+        label.textContent = 'Click Enable to allow 1-day-before desktop alerts';
+      }
+    }
+
+    function triggerT1Notification(title, body) {
+      showToast(title, body, 'amber');
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(title, { body });
+        } catch (e) {}
+      }
+    }
+
+    document.addEventListener('click', (e) => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      const action = target.getAttribute('data-action');
+      const id = target.getAttribute('data-id');
+      const item = state.items.find(i => i.id === id);
+      if (!item) return;
+
+      if (action === 'toggle-t1') {
+        item.notifyT1 = !item.notifyT1;
+        saveState();
+        render();
+        showToast(
+          item.notifyT1 ? 'T-1 Reminder Armed' : 'T-1 Reminder Paused',
+          item.notifyT1 ? `You will be notified on ${formatDate(getT1DateStr(item.nextDueDate))} for ${item.name}.` : `1-day-before alert turned off for ${item.name}.`
+        );
+      } else if (action === 'toggle-paid') {
+        item.paidThisCycle = !item.paidThisCycle;
+        saveState();
+        render();
+        showToast(item.paidThisCycle ? 'Marked Paid' : 'Reverted to Unpaid', `${item.name} updated for this cycle.`);
+      } else if (action === 'ics') {
+        downloadIcs([item], `${item.id}-t1-reminder.ics`);
+      } else if (action === 'edit') {
+        openModal(item);
+      }
+    });
+
+    function openModal(item = null) {
+      document.getElementById('modal-title').textContent = item ? 'Edit Commitment' : 'Add Financial Commitment';
+      document.getElementById('form-id').value = item ? item.id : '';
+      document.getElementById('form-name').value = item ? item.name : '';
+      document.getElementById('form-category').value = item ? item.category : 'protection';
+      document.getElementById('form-ref').value = item ? (item.ref || '') : '';
+      document.getElementById('form-amount').value = item && item.amount !== null ? item.amount : '';
+      document.getElementById('form-cycle').value = item ? item.cycle : 'Monthly';
+      document.getElementById('form-due').value = item ? (item.nextDueDate || '') : '';
+      document.getElementById('form-until').value = item ? (item.payUntil || '') : '';
+      document.getElementById('form-method').value = item ? (item.paymentMethod || '') : '';
+      document.getElementById('form-status').value = item ? item.status : 'active';
+      document.getElementById('form-notes').value = item ? (item.notes || '') : '';
+      document.getElementById('form-notify').checked = item ? !!item.notifyT1 : true;
+      document.getElementById('item-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('item-modal').classList.add('hidden');
+    }
+
+    document.getElementById('btn-open-add').addEventListener('click', () => openModal(null));
+    document.getElementById('btn-close-modal').addEventListener('click', closeModal);
+    document.getElementById('btn-cancel-modal').addEventListener('click', closeModal);
+    document.getElementById('modal-backdrop').addEventListener('click', closeModal);
+
+    document.getElementById('item-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const id = document.getElementById('form-id').value;
+      const amtRaw = document.getElementById('form-amount').value;
+      const payload = {
+        id: id || 'custom-' + Date.now(),
+        name: document.getElementById('form-name').value.trim(),
+        category: document.getElementById('form-category').value,
+        provider: 'Custom Entry',
+        ref: document.getElementById('form-ref').value.trim() || '—',
+        holder: 'Kamalesh Kumar Pandit',
+        amount: amtRaw === '' ? null : Number(amtRaw),
+        amountEstimated: false,
+        cycle: document.getElementById('form-cycle').value,
+        nextDueDate: document.getElementById('form-due').value,
+        payUntil: document.getElementById('form-until').value.trim() || 'Ongoing',
+        paymentMethod: document.getElementById('form-method').value.trim() || '—',
+        status: document.getElementById('form-status').value,
+        notifyT1: document.getElementById('form-notify').checked,
+        paidThisCycle: false,
+        notes: document.getElementById('form-notes').value.trim()
+      };
+
+      if (id) {
+        const idx = state.items.findIndex(i => i.id === id);
+        if (idx >= 0) {
+          state.items[idx] = { ...state.items[idx], ...payload };
+        }
+      } else {
+        state.items.unshift(payload);
+      }
+      saveState();
+      closeModal();
+      render();
+      showToast('Commitment Saved', `${payload.name} has been updated.`);
+    });
+
+    document.getElementById('btn-enable-browser-notify').addEventListener('click', async () => {
+      if (!('Notification' in window)) return;
+      try {
+        const perm = await Notification.requestPermission();
+        updateBrowserPermLabel();
+        if (perm === 'granted') {
+          triggerT1Notification('Subscription Tracker Alerts Enabled', 'You will receive 1-day-before due date reminders.');
+        }
+      } catch (e) {}
+    });
+
+    document.getElementById('btn-test-notification').addEventListener('click', () => {
+      const next = state.items.find(i => i.notifyT1 && i.nextDueDate && i.category !== 'archived');
+      if (next) {
+        triggerT1Notification(
+          `T-1 Reminder: ${next.name}`,
+          `${formatINR(next.amount)} is due on ${formatDate(next.nextDueDate)}. Ensure funds are ready.`
+        );
+      } else {
+        triggerT1Notification('T-1 Reminder Test', '1-day-before alert system is active.');
+      }
+    });
+
+    document.getElementById('btn-export-all-ics').addEventListener('click', () => {
+      const armed = state.items.filter(i => i.notifyT1 && i.nextDueDate && i.category !== 'archived');
+      downloadIcs(armed, 'kamaledger-t1-reminders.ics');
+    });
+
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      state.search = e.target.value;
+      renderLedger();
+      if (window.lucide) lucide.createIcons();
+    });
+
+    document.getElementById('status-filter').addEventListener('change', (e) => {
+      state.statusFilter = e.target.value;
+      renderLedger();
+      if (window.lucide) lucide.createIcons();
+    });
+
+    function openAttentionLedger() {
+      state.activeCategory = 'all';
+      state.statusFilter = 'attention';
+      document.getElementById('status-filter').value = 'attention';
+      switchPage('ledger');
+      render();
+    }
+
+    document.getElementById('btn-filter-overdue').addEventListener('click', openAttentionLedger);
+    document.getElementById('kpi-card-attention').addEventListener('click', openAttentionLedger);
+
+    document.getElementById('btn-reset-data').addEventListener('click', () => {
+      state.items = JSON.parse(JSON.stringify(INITIAL_ITEMS));
+      state.activeCategory = 'all';
+      state.search = '';
+      state.statusFilter = 'all';
+      document.getElementById('search-input').value = '';
+      document.getElementById('status-filter').value = 'all';
+      saveState();
+      render();
+      showToast('Data Reset', 'Restored original Gmail-verified commitments.');
+    });
+
+    // --- Security, Login & WebAuthn Biometric System ---
+    const AUTH_KEY = 'subtracker_auth_v2';
+    const DEFAULT_AUTH = {
+      email: 'kamalesh.pandit14@gmail.com',
+      salt: 'st_default',
+      pinHash: '2e86a2bc362b009252038fa3b11950436cbef7d803f646dcaa1d5f445ecf1a29',
+      credId: null
+    };
+    let failedAttempts = 0;
+    let lockoutUntil = 0;
+    let idleTimer = null;
+
+    function loadAuth() {
+      try {
+        const raw = localStorage.getItem(AUTH_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.pinHash) return parsed;
+        }
+      } catch (e) {}
+      return { ...DEFAULT_AUTH };
+    }
+
+    function saveAuth(auth) {
+      try {
+        localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
+      } catch (e) {}
+    }
+
+    function sha256Hex(ascii) {
+      function rightRotate(value, amount) {
+        return (value >>> amount) | (value << (32 - amount));
+      }
+      const mathPow = Math.pow;
+      const maxWord = mathPow(2, 32);
+      const lengthProperty = 'length';
+      let i, j;
+      let result = '';
+      const words = [];
+      const asciiBitLength = ascii[lengthProperty] * 8;
+      const hash = [];
+      const k = [];
+      let primeCounter = 0;
+      const isComposite = {};
+      for (let candidate = 2; primeCounter < 64; candidate++) {
+        if (!isComposite[candidate]) {
+          for (i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+          hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+          k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+        }
+      }
+      ascii += '\x80';
+      while ((ascii[lengthProperty] % 64) - 56) ascii += '\x00';
+      for (i = 0; i < ascii[lengthProperty]; i++) {
+        j = ascii.charCodeAt(i);
+        words[i >> 2] |= j << (((3 - i) % 4) * 8);
+      }
+      words[words[lengthProperty]] = (asciiBitLength / maxWord) | 0;
+      words[words[lengthProperty]] = asciiBitLength;
+      for (j = 0; j < words[lengthProperty];) {
+        const w = words.slice(j, (j += 16));
+        const oldHash = hash.slice(0);
+        for (i = 0; i < 64; i++) {
+          const w15 = w[i - 15], w2 = w[i - 2];
+          const a = hash[0], e = hash[4];
+          const temp1 = hash[7] + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + ((e & hash[5]) ^ (~e & hash[6])) + k[i] + (w[i] = (i < 16) ? w[i] : (w[i - 16] + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) | 0);
+          const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+          hash.unshift((temp1 + temp2) | 0);
+          hash[4] = (hash[4] + temp1) | 0;
+          hash.pop();
+        }
+        for (i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+      }
+      for (i = 0; i < 8; i++) {
+        for (j = 3; j + 1; j--) {
+          const b = (hash[i] >> (j * 8)) & 255;
+          result += (b < 16 ? '0' : '') + b.toString(16);
+        }
+      }
+      return result;
+    }
+
+    async function hashPasscode(pin, salt) {
+      const clean = String(pin || '').trim();
+      const utf8 = unescape(encodeURIComponent(salt + ':' + clean));
+      return sha256Hex(utf8);
+    }
+
+    function bufToB64(buf) {
+      return btoa(String.fromCharCode(...new Uint8Array(buf)));
+    }
+
+    function b64ToBuf(b64) {
+      const bin = atob(b64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return arr.buffer;
+    }
+
+    function resetIdleTimer() {
+      if (idleTimer) clearTimeout(idleTimer);
+      if (!document.getElementById('app-shell').classList.contains('hidden')) {
+        idleTimer = setTimeout(() => {
+          lockVault();
+          showToast('Session Locked', 'Vault locked automatically after 5 minutes of inactivity.', 'amber');
+        }, 5 * 60 * 1000);
+      }
+    }
+
+    ['mousemove', 'keydown', 'touchstart', 'click'].forEach(evt => {
+      document.addEventListener(evt, resetIdleTimer, { passive: true });
+    });
+
+    function unlockVault() {
+      failedAttempts = 0;
+      lockoutUntil = 0;
+      document.getElementById('auth-gate').classList.add('hidden');
+      document.getElementById('app-shell').classList.remove('hidden');
+      loadState();
+      render();
+      resetIdleTimer();
+      autoSyncGmailOnUnlock();
+    }
+
+    function lockVault() {
+      if (idleTimer) clearTimeout(idleTimer);
+      document.getElementById('app-shell').classList.add('hidden');
+      document.getElementById('auth-gate').classList.remove('hidden');
+      document.getElementById('login-pin').value = '';
+      updatePinDots();
+      document.getElementById('login-error').classList.add('hidden');
+      // --- Gmail Auto-Sync, Apps Script Bridge & Today's Payment Banner ---
+    const GMAIL_CFG_KEY = 'subtracker_gmail_cfg_v1';
+    const TODAY_LOG_KEY = 'subtracker_today_log_v2';
+
+    const GAS_CODE = `function doGet() {
+  var q = 'newer_than:7d (from:alerts@hdfcbank.bank.in OR from:iciciprulife.com OR from:icicilife.com OR from:hdfclife.com OR from:tataaia.com OR from:axismaxlife.com OR from:tatacapital.in OR from:policybazaar.com OR from:anthropic.com OR from:openai.com OR from:nipponindiamf.com)';
+  var threads = GmailApp.search(q, 0, 30);
+  var out = [];
+  for (var i = 0; i < threads.length; i++) {
+    var msgs = threads[i].getMessages();
+    var m = msgs[msgs.length - 1];
+    out.push({
+      id: m.getId(),
+      date: Utilities.formatDate(m.getDate(), Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+      subject: m.getSubject(),
+      body: m.getPlainBody().slice(0, 1200)
+    });
+  }
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, emails: out }))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+
+    const MATCH_RULES = [
+      { id: 'icici-iprotect', keys: ['j5156869', 'icici', 'iprotect'] },
+      { id: 'hdfc-click2protect', keys: ['27635036', 'click2 protect', 'policybazaar'] },
+      { id: 'hdfc-ergo-health', keys: ['2805203651803906', 'optima restore', 'hdfc ergo'] },
+      { id: 'tata-aia-ulip', keys: ['u242310105', 'tata aia', 'smart sip'] },
+      { id: 'axis-max-ulip', keys: ['638387688', 'axis max', 'max life'] },
+      { id: 'tata-capital-loan', keys: ['tata capital', '5154', 'en7812051172869350'] },
+      { id: 'hdfc-policy-loan', keys: ['lap0220310027', 'hdfclap0120310027', '20310027'] },
+      { id: 'hdfc-rd', keys: ['8530', 'recurring deposit'] },
+      { id: 'nippon-sip-1', keys: ['nippon', 'rmdirect-l45194'] },
+      { id: 'claude-pro', keys: ['anthropic', 'claude'] },
+      { id: 'chatgpt-plus', keys: ['openai', 'chatgpt'] }
+    ];
+
+    function getLocalTodayKey() {
+      try {
+        return new Date().toLocaleDateString('en-CA');
+      } catch (e) {
+        return TODAY_STR;
+      }
+    }
+
+    function renderTodayPaidBanner() {
+      let logs = [];
+      try {
+        const raw = localStorage.getItem(TODAY_LOG_KEY);
+        if (raw) logs = JSON.parse(raw);
+      } catch (e) {}
+      const todayKey = getLocalTodayKey();
+      const todayLogs = logs.filter(l => l.date === todayKey);
+      const banner = document.getElementById('today-paid-banner');
+      if (!banner) return;
+      if (todayLogs.length === 0) {
+        banner.classList.add('hidden');
+        return;
+      }
+      banner.classList.remove('hidden');
+      const totalToday = todayLogs.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
+      document.getElementById('today-paid-title').textContent = `Today ${formatINR(totalToday)} has been paid`;
+      document.getElementById('today-paid-desc').textContent = todayLogs
+        .map(l => `Today ${formatINR(l.amount)} has been paid against ${l.name}.`)
+        .join(' ');
+    }
+
+    function recordTodayPayment(item, amount, emailId = null, emailDate = null) {
+      const todayKey = getLocalTodayKey();
+      const targetDate = emailDate || todayKey;
+      const amt = amount !== null && !isNaN(amount) ? Number(amount) : (Number(item.amount) || 0);
+
+      item.paidThisCycle = true;
+      if (item.status === 'overdue') item.status = 'active';
+      saveState();
+
+      // Only add to Today's Payment Banner if the email/payment is actually from TODAY, and deduplicate
+      if (targetDate === todayKey) {
+        let logs = [];
+        try {
+          const raw = localStorage.getItem(TODAY_LOG_KEY);
+          if (raw) logs = JSON.parse(raw);
+        } catch (e) {}
+
+        const alreadyLogged = logs.some(l =>
+          (emailId && l.emailId === emailId) ||
+          (l.id === item.id && l.date === todayKey && Number(l.amount) === amt)
+        );
+        if (!alreadyLogged) {
+          logs.push({ id: item.id, name: item.name, amount: amt, date: todayKey, emailId: emailId || ('manual-' + Date.now()) });
+          try { localStorage.setItem(TODAY_LOG_KEY, JSON.stringify(logs)); } catch (e) {}
+          showToast('Payment Logged', `Today ${formatINR(amt)} has been paid against ${item.name}.`);
+        }
+      }
+      render();
+      renderTodayPaidBanner();
+    }
+
+    function matchTextToCommitment(text) {
+      const low = (text || '').toLowerCase();
+      // Reject failed, declined, reminder, and upcoming/due notices
+      const rejectWords = [
+        'failed', 'declined', 'insufficient funds', 'unsuccessful',
+        'reminder', 'due on', 'upcoming', 'pay now', 'paynow', 'missed',
+        'keep your account funded', 'advance intimation', 'auto debit due',
+        'is due for debit', 'outstanding', 'will be debited'
+      ];
+      if (rejectWords.some(w => low.includes(w))) return null;
+
+      // Require positive payment confirmation phrasing
+      const confirmWords = [
+        'debited', 'received', 'payment receipt', 'successfully paid',
+        'thank you for making a payment', 'confirm the receipt of payment',
+        'instant premium receipt', 'we have received premium'
+      ];
+      if (!confirmWords.some(w => low.includes(w))) return null;
+
+      const amtMatch = text.match(/(?:rs\.?|inr|₹)\s*([0-9,]+(?:\.[0-9]{1,2})?)/i);
+      const parsedAmt = amtMatch ? Number(amtMatch[1].replace(/,/g, '')) : null;
+      for (const rule of MATCH_RULES) {
+        if (rule.keys.some(k => low.includes(k))) {
+          const item = state.items.find(i => i.id === rule.id);
+          if (item) return { item, parsedAmt };
+        }
+      }
+      return null;
+    }
+
+    document.getElementById('btn-clear-today-banner').addEventListener('click', () => {
+      try { localStorage.removeItem(TODAY_LOG_KEY); } catch (e) {}
+      renderTodayPaidBanner();
+    });
+
+    document.getElementById('btn-copy-gas').addEventListener('click', () => {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(GAS_CODE).catch(() => {});
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = GAS_CODE;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      }
+      showToast('Apps Script Copied', 'Paste into script.google.com under kamalesh.pandit14@gmail.com and deploy as a Web App.');
+    });
+
+    async function runGmailSync(url, silent = false) {
+      const statusEl = document.getElementById('gmail-sync-status');
+      if (!url || !url.startsWith('https://')) {
+        if (!silent) {
+          const msg = (url || '').includes('@')
+            ? 'You entered an email address. Please paste your deployed https://script.google.com/macros/s/.../exec Web App URL from Step 1.'
+            : 'Enter a valid https:// Google Apps Script Web App URL from Step 1.';
+          statusEl.textContent = msg;
+          statusEl.className = 'text-[11px] text-rose-700 font-medium';
+          showToast('Web App URL Required', msg, 'amber');
+        }
+        return;
+      }
+      try { localStorage.setItem(GMAIL_CFG_KEY, url); } catch (e) {}
+      statusEl.className = 'text-[11px] text-tealbrand font-medium';
+      statusEl.textContent = 'Syncing with kamalesh.pandit14@gmail.com...';
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        let matched = 0;
+        if (data && Array.isArray(data.emails)) {
+          data.emails.forEach(em => {
+            const hit = matchTextToCommitment(`${em.subject} ${em.body}`);
+            if (hit) {
+              recordTodayPayment(hit.item, hit.parsedAmt, em.id, em.date);
+              matched++;
+            }
+          });
+        }
+        const msg = matched > 0
+          ? `Synced ${matched} payment(s) from Gmail.`
+          : 'Auto-Sync active! No new successful payment emails in the last 7 days.';
+        statusEl.textContent = msg;
+        if (!silent || matched > 0) {
+          showToast('Gmail Sync Complete', msg);
+        }
+      } catch (err) {
+        statusEl.className = 'text-[11px] text-rose-700 font-medium';
+        statusEl.textContent = 'Could not reach the Apps Script URL. Make sure you deployed with "Who has access: Anyone" and opened your published site.';
+        if (!silent) showToast('Sync Error', statusEl.textContent, 'rose');
+      }
+    }
+
+    function autoSyncGmailOnUnlock() {
+      try {
+        const savedUrl = localStorage.getItem(GMAIL_CFG_KEY);
+        if (savedUrl && savedUrl.startsWith('https://')) {
+          runGmailSync(savedUrl, true);
+        }
+      } catch (e) {}
+    }
+
+    document.getElementById('btn-run-gmail-sync').addEventListener('click', () => {
+      const url = document.getElementById('gmail-endpoint-input').value.trim();
+      runGmailSync(url, false);
+    });
+
+    document.getElementById('parse-email-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const txt = document.getElementById('parse-email-text').value.trim();
+      const hit = matchTextToCommitment(txt);
+      if (!hit) {
+        showToast('No Match Found', 'Could not match a successful payment to a listed policy, loan, or subscription.', 'amber');
+        return;
+      }
+      recordTodayPayment(hit.item, hit.parsedAmt);
+      document.getElementById('parse-email-text').value = '';
+      switchPage('home');
+    });
+
+    const _origRender = render;
+    render = function() {
+      _origRender();
+      renderTodayPaidBanner();
+    };
+
+    function switchPage(pageId) {
+      document.querySelectorAll('.page-view').forEach(p => p.classList.add('hidden'));
+      const target = document.getElementById('page-' + pageId);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('.nav-pill').forEach(btn => {
+        const active = btn.getAttribute('data-nav') === pageId;
+        btn.className = active
+          ? 'nav-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-obsidian transition inline-flex items-center gap-1.5'
+          : 'nav-pill px-3 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-white transition inline-flex items-center gap-1.5';
+      });
+
+      document.querySelectorAll('.nav-pill-mob').forEach(btn => {
+        const active = btn.getAttribute('data-nav') === pageId;
+        btn.className = active
+          ? 'nav-pill-mob flex flex-col items-center justify-center py-1 rounded-xl text-[10px] font-semibold text-tealbrand bg-teal-50/70'
+          : 'nav-pill-mob flex flex-col items-center justify-center py-1 rounded-xl text-[10px] font-medium text-muted';
+      });
+
+      if (pageId === 'settings') {
+        try {
+          const saved = localStorage.getItem(GMAIL_CFG_KEY);
+          if (saved) document.getElementById('gmail-endpoint-input').value = saved;
+        } catch (e) {}
+        updateSecurityModalUI();
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    document.querySelectorAll('[data-nav]').forEach(btn => {
+      btn.addEventListener('click', () => switchPage(btn.getAttribute('data-nav')));
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+    initAuthGate();
+    }
+
+    function initAuthGate() {
+      const auth = loadAuth();
+      const setupForm = document.getElementById('auth-setup-form');
+      const loginForm = document.getElementById('auth-login-form');
+      const bioHint = document.getElementById('biometric-hint');
+
+      if (!auth || !auth.pinHash) {
+        setupForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+      } else {
+        setupForm.classList.add('hidden');
+        loginForm.classList.remove('hidden');
+        document.getElementById('login-account-label').textContent = auth.email || 'kamalesh.pandit14@gmail.com';
+        if (auth.credId) {
+          bioHint.textContent = 'Biometric passkey linked. Tap Biometrics to unlock with Fingerprint / Face ID.';
+        } else {
+          bioHint.textContent = 'Sign in with your PIN, then tap the Fingerprint icon in the header to link Biometrics.';
+        }
+      }
+      updateSecurityModalUI();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    document.getElementById('auth-setup-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pin = document.getElementById('setup-pin').value.trim();
+      const confirm = document.getElementById('setup-pin-confirm').value.trim();
+      const errEl = document.getElementById('setup-error');
+      if (pin.length < 4) {
+        errEl.textContent = 'PIN must be at least 4 digits.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      if (pin !== confirm) {
+        errEl.textContent = 'PINs do not match. Please try again.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      errEl.classList.add('hidden');
+      const salt = 'st_' + Date.now();
+      const pinHash = await hashPasscode(pin, salt);
+      saveAuth({ email: 'kamalesh.pandit14@gmail.com', salt, pinHash, credId: null });
+      document.getElementById('setup-pin').value = '';
+      document.getElementById('setup-pin-confirm').value = '';
+      unlockVault();
+      showToast('Vault PIN Created', 'Your PIN is saved. Tap the Fingerprint icon in the header to link Biometrics.');
+    });
+
+    function updateSecurityModalUI() {
+      const auth = loadAuth();
+      const badge = document.getElementById('sec-bio-status');
+      const removeBtn = document.getElementById('btn-remove-biometric');
+      if (auth && auth.credId) {
+        badge.textContent = 'Enrolled';
+        badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800';
+        removeBtn.classList.remove('hidden');
+      } else {
+        badge.textContent = 'Not Enrolled';
+        badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-stone-200 text-stone-700';
+        removeBtn.classList.add('hidden');
+      }
+    }
+
+    function updatePinDots() {
+      const val = document.getElementById('login-pin').value || '';
+      const dots = document.querySelectorAll('#pin-dots span');
+      dots.forEach((dot, idx) => {
+        if (idx < val.length) {
+          dot.className = 'w-3 h-3 rounded-full border border-emerald-400 bg-emerald-400 scale-110 transition-all';
+        } else {
+          dot.className = 'w-3 h-3 rounded-full border border-white/30 bg-white/5 transition-all';
+        }
+      });
+    }
+
+    document.getElementById('login-pin').addEventListener('input', updatePinDots);
+    document.getElementById('pin-dots').addEventListener('click', () => {
+      document.getElementById('login-pin').focus();
+    });
+
+    document.getElementById('btn-toggle-pin-vis').addEventListener('click', () => {
+      const inp = document.getElementById('login-pin');
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    });
+
+    document.getElementById('auth-login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('login-error');
+      const now = Date.now();
+      if (now < lockoutUntil) {
+        const secs = Math.ceil((lockoutUntil - now) / 1000);
+        errEl.textContent = `Too many failed attempts. Try again in ${secs}s.`;
+        errEl.classList.remove('hidden');
+        return;
+      }
+      const auth = loadAuth();
+      const pin = document.getElementById('login-pin').value;
+      const candidate = await hashPasscode(pin, auth.salt);
+      if (candidate === auth.pinHash) {
+        errEl.classList.add('hidden');
+        unlockVault();
+      } else {
+        failedAttempts++;
+        if (failedAttempts >= 5) {
+          lockoutUntil = Date.now() + 30000;
+          failedAttempts = 0;
+          errEl.textContent = '5 incorrect attempts. Vault locked for 30 seconds.';
+        } else {
+          errEl.textContent = `Incorrect passcode (${5 - failedAttempts} attempt(s) remaining).`;
+        }
+        errEl.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('btn-biometric-login').addEventListener('click', async () => {
+      const auth = loadAuth();
+      const errEl = document.getElementById('login-error');
+      if (!auth || !auth.credId) {
+        errEl.textContent = 'No biometric passkey linked yet. Sign in with passcode and enroll in Security Settings.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      if (!window.PublicKeyCredential || !navigator.credentials) {
+        errEl.textContent = 'Biometric WebAuthn is not supported in this browser/preview. Use your passcode.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      try {
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
+        const assertion = await navigator.credentials.get({
+          publicKey: {
+            challenge,
+            allowCredentials: [{ id: b64ToBuf(auth.credId), type: 'public-key' }],
+            userVerification: 'required',
+            timeout: 60000
+          }
+        });
+        if (assertion) {
+          errEl.classList.add('hidden');
+          unlockVault();
+        }
+      } catch (err) {
+        errEl.textContent = 'Biometric verification was cancelled or blocked in this preview. Use your passcode.';
+        errEl.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('btn-forgot-pin').addEventListener('click', () => {
+      document.getElementById('auth-login-form').classList.add('hidden');
+      document.getElementById('auth-forgot-form').classList.remove('hidden');
+      document.getElementById('forgot-error').classList.add('hidden');
+    });
+
+    document.getElementById('btn-back-to-login').addEventListener('click', () => {
+      document.getElementById('auth-forgot-form').classList.add('hidden');
+      document.getElementById('auth-login-form').classList.remove('hidden');
+    });
+
+    document.getElementById('auth-forgot-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const auth = loadAuth() || { ...DEFAULT_AUTH };
+      const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+      const last4 = document.getElementById('forgot-last4').value.trim();
+      const newPin = document.getElementById('forgot-new-pin').value;
+      const errEl = document.getElementById('forgot-error');
+
+      if (email !== (auth.email || 'kamalesh.pandit14@gmail.com').toLowerCase() || last4 !== '5191') {
+        errEl.textContent = 'Email or bank account last 4 digits did not match.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      errEl.classList.add('hidden');
+      auth.salt = 'st_' + Date.now();
+      auth.pinHash = await hashPasscode(newPin, auth.salt);
+      saveAuth(auth);
+      document.getElementById('forgot-new-pin').value = '';
+      document.getElementById('forgot-last4').value = '';
+      document.getElementById('auth-forgot-form').classList.add('hidden');
+      document.getElementById('auth-login-form').classList.remove('hidden');
+      unlockVault();
+      showToast('Passcode Reset', 'Your new passcode is active and you are signed in.');
+    });
+
+    document.getElementById('btn-lock-app').addEventListener('click', lockVault);
+
+    document.getElementById('btn-enroll-biometric').addEventListener('click', async () => {
+      if (!window.PublicKeyCredential || !navigator.credentials) {
+        showToast('Biometrics Unavailable', 'WebAuthn requires an HTTPS browser context (works on published Google Sites or mobile Safari/Chrome).', 'amber');
+        return;
+      }
+      try {
+        const auth = loadAuth();
+        const challenge = new Uint8Array(32);
+        const userId = new Uint8Array(16);
+        window.crypto.getRandomValues(challenge);
+        window.crypto.getRandomValues(userId);
+        const cred = await navigator.credentials.create({
+          publicKey: {
+            challenge,
+            rp: { name: 'Subscription Tracker' },
+            user: {
+              id: userId,
+              name: auth.email || 'kamalesh.pandit14@gmail.com',
+              displayName: 'Kamalesh Kumar Pandit'
+            },
+            pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+            authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+            timeout: 60000
+          }
+        });
+        if (cred && cred.rawId) {
+          auth.credId = bufToB64(cred.rawId);
+          saveAuth(auth);
+          updateSecurityModalUI();
+          showToast('Biometrics Enrolled', 'Fingerprint / Face ID passkey is now linked to your vault.');
+        }
+      } catch (err) {
+        showToast('Biometric Enrollment Blocked', 'Your device or iframe preview blocked passkey creation. Passcode lock remains active.', 'amber');
+      }
+    });
+
+    document.getElementById('btn-remove-biometric').addEventListener('click', () => {
+      const auth = loadAuth();
+      auth.credId = null;
+      saveAuth(auth);
+      updateSecurityModalUI();
+      showToast('Biometrics Removed', 'Passkey unlinked. Passcode lock remains active.');
+    });
+
+    document.getElementById('change-pin-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newPin = document.getElementById('new-pin-input').value;
+      const auth = loadAuth() || { ...DEFAULT_AUTH };
+      auth.salt = 'st_' + Date.now();
+      auth.pinHash = await hashPasscode(newPin, auth.salt);
+      saveAuth(auth);
+      document.getElementById('new-pin-input').value = '';
+      
+      showToast('Passcode Updated', 'Your new Master Passcode is active.');
+    });
+
+    // --- Mobile Home Screen / PWA Install Guide ---
+
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const nativeBtn = document.getElementById('btn-native-install');
+      if (nativeBtn) nativeBtn.classList.remove('hidden');
+    });
+    document.getElementById('btn-native-install').addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      try { await deferredInstallPrompt.userChoice; } catch (e) {}
+      deferredInstallPrompt = null;
+      document.getElementById('btn-native-install').classList.add('hidden');
+      
+    });
+
+    initAuthGate();
+    initAuthGate();
+  </script>
+</body>
+</html>
